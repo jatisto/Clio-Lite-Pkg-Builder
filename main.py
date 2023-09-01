@@ -1,3 +1,4 @@
+import datetime
 import time
 import tkinter as tk
 import threading
@@ -5,6 +6,8 @@ from tkinter import ttk, messagebox
 import subprocess
 import json
 import os
+
+from ttkthemes.themed_style import ThemedStyle
 
 
 class PackageGeneratorApp:
@@ -17,23 +20,29 @@ class PackageGeneratorApp:
         self.progressbar = None
         self.root = root
         self.root.title("Clio lite pkg builder")
-        self.root.geometry("800x400+0+0")
-        self.root.minsize(800, 400)
-        self.root.maxsize(800, 400)
 
-        window_width = 800
-        window_height = 400
+        self.window_width = 800
+        self.window_height = 400
 
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
+        self.screen_width = self.root.winfo_screenwidth()
+        self.screen_height = self.root.winfo_screenheight()
 
-        x_position = (screen_width - window_width) // 2
-        y_position = (screen_height - window_height) // 2
+        self.x_position = (self.screen_width - self.window_width) // 2
+        self.y_position = (self.screen_height - self.window_height) // 2
 
-        self.root.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
+        self.root.geometry(f"{self.window_width}x{self.window_height}+{self.x_position}+{self.y_position}")
 
         self.packages = []
         self.selected_packages = []
+
+        # Получите текущую дату и время
+        self.current_datetime = datetime.datetime.now()
+
+        # Преобразуйте дату и время в строку в нужном формате
+        self.formatted_datetime = self.current_datetime.strftime("%d.%m.%Y_%H.%M.%S")
+
+        # Создайте строку с добавленным "_v1"
+        self.result_string = f"packages_{self.formatted_datetime}"
 
         self.path_var = tk.StringVar()
         self.path_var.set("")
@@ -42,6 +51,7 @@ class PackageGeneratorApp:
         self.path_to_pkg_var = tk.StringVar()
 
         self.package_name_var = tk.StringVar()
+        self.package_name_var.set(f"{self.result_string}")
 
         self.check_buttons = []
 
@@ -53,7 +63,6 @@ class PackageGeneratorApp:
         self.isStopTimer = False
 
         self.load_settings()
-
         self.create_widgets()
 
     def create_widgets(self):
@@ -62,6 +71,7 @@ class PackageGeneratorApp:
 
         path_var = ttk.Entry(frame_1, cursor="ibeam", textvariable=self.path_var)
         path_var.place(width=265, height=25, x=8, y=20)
+        self.set_placeholder(path_var, "D:\\Pkg\\")
 
         button_add_path = ttk.Button(frame_1, text="Добавить путь", command=self.add_path_for_pkg)
         button_add_path.place(width=115, height=27, x=650, y=19)
@@ -69,8 +79,8 @@ class PackageGeneratorApp:
         button_open_packages = ttk.Button(frame_1, text="Добавить/Удалить пакеты", command=self.open_packages_input)
         button_open_packages.place(width=164, height=27, x=476, y=19)
 
-        label_package_name = ttk.Label(frame_1, text="Путь")
-        label_package_name.place(width=133, height=17, x=6, y=1)
+        label_package_name = ttk.Label(frame_1, text="Путь для сохранения пакета")
+        label_package_name.place(width=250, height=17, x=6, y=1)
 
         self.path_to_pkg_combobox = ttk.Combobox(self.root, values=self.path_for_pkg_var.get().split(","), width=50)
         self.path_to_pkg_combobox.set(self.path_to_pkg_var.get())
@@ -106,7 +116,7 @@ class PackageGeneratorApp:
         self.progressbar = ttk.Progressbar(self.root, mode='determinate', length=240)
         self.progressbar.place(x=262, y=363)
 
-        self.time_label = ttk.Label(root, text="Время выполнения: 0.0 мин.")
+        self.time_label = ttk.Label(self.root, text="Время выполнения: 0.0 мин.")
         self.time_label.pack_forget()
 
     def select_all_checkboxes(self):
@@ -195,13 +205,13 @@ class PackageGeneratorApp:
         print("Generated Command:", command)
 
     def load_settings(self):
-        if os.path.exists("setting_clio.json"):
+        if os.path.exists("setting.json"):
             try:
-                with open("setting_clio.json", "r") as file:
+                with open("setting.json", "r") as file:
                     data = json.load(file)
                     self.path_var.set(data.get("path", ""))
                     self.path_for_pkg_var.set(data.get("path_for_pkg", ""))
-                    self.package_name_var.set(data.get("package_name", ""))
+                    # self.package_name_var.set(data.get("package_name", ""))
                     self.packages = data.get("packages", [])
                     self.path_to_pkg_var.set(data.get("path_to_pkg", ""))
             except FileNotFoundError:
@@ -219,7 +229,7 @@ class PackageGeneratorApp:
             "package_name": self.package_name_var.get(),
             "packages": self.packages
         }
-        with open("setting_clio.json", "w") as file:
+        with open("setting.json", "w") as file:
             json.dump(data, file)
 
     def run_command(self):
@@ -291,8 +301,30 @@ class PackageGeneratorApp:
             self.time_label.config(text=f"Время выполнения: {minutes:.0f}.{fraction_minutes:.0f} мин.")
             time.sleep(1)
 
+    @staticmethod
+    def set_placeholder(widget, placeholder_text):
+        def clear_placeholder(event):
+            if widget.get() == placeholder_text:
+                widget.delete(0, tk.END)
+                widget.configure(foreground="gray")
+
+        def restore_placeholder(event):
+            if not widget.get():
+                widget.insert(0, placeholder_text)
+                widget.configure(foreground="gray")
+
+        if not widget.get():
+            widget.insert(0, placeholder_text)
+            widget.configure(foreground="gray")
+            widget.tag_add("placeholder", "1.0", "end")
+
+        widget.bind("<FocusIn>", clear_placeholder)
+        widget.bind("<FocusOut>", restore_placeholder)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
+    style = ThemedStyle(root)
+    style.set_theme("clam")
     app = PackageGeneratorApp(root)
     root.mainloop()
