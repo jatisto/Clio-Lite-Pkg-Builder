@@ -1,7 +1,7 @@
 import time
 import tkinter as tk
 import threading
-from tkinter import ttk, messagebox  # Добавьте messagebox в импорты
+from tkinter import ttk, messagebox
 import subprocess
 import json
 import os
@@ -9,8 +9,14 @@ import os
 
 class PackageGeneratorApp:
     def __init__(self, root):
+        self.check_buttons_frame = None
+        self.input_text = None
+        self.time_label = None
+        self.generated_command_label = None
+        self.path_to_pkg_combobox = None
+        self.progressbar = None
         self.root = root
-        self.root.title("Clio Lite Pkg Builder")
+        self.root.title("Clio lite pkg builder")
         self.root.geometry("800x400+0+0")
         self.root.minsize(800, 400)
         self.root.maxsize(800, 400)
@@ -30,14 +36,14 @@ class PackageGeneratorApp:
         self.selected_packages = []
 
         self.path_var = tk.StringVar()
-        self.path_var.set("E:\\Linux_Creatio\\ExportPkg\\")
+        self.path_var.set("")
 
         self.path_for_pkg_var = tk.StringVar()
         self.path_to_pkg_var = tk.StringVar()
 
         self.package_name_var = tk.StringVar()
 
-        self.checkbuttons = []
+        self.check_buttons = []
 
         self.generated_command_var = tk.StringVar()
         self.generated_command_var.set("Команда")  # Устанавливаем начальное значение пустой строки
@@ -67,7 +73,7 @@ class PackageGeneratorApp:
         label_package_name.place(width=133, height=17, x=6, y=1)
 
         self.path_to_pkg_combobox = ttk.Combobox(self.root, values=self.path_for_pkg_var.get().split(","), width=50)
-        self.path_to_pkg_combobox.set(self.path_to_pkg_var.get())  # Устанавливаем выбранное значение
+        self.path_to_pkg_combobox.set(self.path_to_pkg_var.get())
         self.path_to_pkg_combobox.place(width=757, height=25, x=20, y=74)
         self.path_to_pkg_combobox.bind("<<ComboboxSelected>>", self.on_path_selected)
 
@@ -86,12 +92,10 @@ class PackageGeneratorApp:
         button_generate_command = ttk.Button(self.root, text="Собрать команду", command=self.generate_command)
         button_generate_command.place(width=115, height=27, x=510, y=360)
 
-        # Создаем виджет для отображения динамической строки команды
         self.generated_command_label = tk.Label(self.root, textvariable=self.generated_command_var, anchor="w")
-        self.generated_command_label.place(width=744, height=25, x=12,
-                                           y=326)  # Установите расположение и размер по вашему усмотрению
+        self.generated_command_label.place(width=744, height=25, x=12, y=326)
 
-        self.create_checkbuttons()
+        self.create_check_buttons()
 
         button_save_settings = ttk.Button(self.root, text="Сохранить настройки", command=self.save_settings)
         button_save_settings.place(width=141, height=27, x=640, y=360)
@@ -99,17 +103,14 @@ class PackageGeneratorApp:
         button_select_all = ttk.Button(self.root, text="Выделить все", command=self.select_all_checkboxes)
         button_select_all.place(width=115, height=27, x=140, y=360)
 
-        self.progressbar = ttk.Progressbar(self.root, mode='determinate',
-                                           length=240)  # Режим 'indeterminate' для анимации
-        self.progressbar.place(x=262, y=363)  # Позиция, где вы хотите разместить индикатор выполнения
+        self.progressbar = ttk.Progressbar(self.root, mode='determinate', length=240)
+        self.progressbar.place(x=262, y=363)
 
-        # Создайте Label для отображения времени
         self.time_label = ttk.Label(root, text="Время выполнения: 0.0 мин.")
-        # self.time_label.place(x=300, y=300)  # Расположение над прогресс-баром
         self.time_label.pack_forget()
 
     def select_all_checkboxes(self):
-        for package, var, cb in self.checkbuttons:
+        for package, var, cb in self.check_buttons:
             var.set(1)
 
     def paste(self, event):
@@ -128,9 +129,7 @@ class PackageGeneratorApp:
         input_window = tk.Toplevel(self.root)
         input_text = tk.Text(input_window)
         input_text.pack()
-
         input_text.insert(tk.END, self.path_for_pkg_var.get())
-        # Привязываем горячие клавиши
         input_text.bind("<Control-v>", self.paste)
         input_text.bind("<Control-a>", self.select_all)
 
@@ -139,24 +138,24 @@ class PackageGeneratorApp:
             self.path_for_pkg_var.set(path_for_pkg)
             input_window.destroy()
 
-            self.save_settings()  # Сохраняем настройки после обновления пути
+            self.save_settings()
 
         tk.Button(input_window, text="Сохранить", command=save_path_for_pkg).pack()
 
-    def create_checkbuttons(self):
-        self.checkbuttons_frame = ttk.Frame(self.root)
-        self.checkbuttons_frame.place(width=757, height=217, x=12, y=107)  # Расположение внизу с отрицательным отступом
+    def create_check_buttons(self):
+        self.check_buttons_frame = ttk.Frame(self.root)
+        self.check_buttons_frame.place(width=757, height=217, x=12, y=107)
 
-        checkbuttons_frame_inner = ttk.Frame(self.checkbuttons_frame)
-        checkbuttons_frame_inner.pack()  # Внутренний фрейм для упорядочивания чекбоксов
+        check_buttons_frame_inner = ttk.Frame(self.check_buttons_frame)
+        check_buttons_frame_inner.pack()
 
         row = 0
         col = 0
         for package in self.packages:
             var = tk.IntVar()
-            cb = tk.Checkbutton(checkbuttons_frame_inner, text=package, variable=var)
-            cb.grid(row=row, column=col, padx=3, pady=3, sticky="w")  # Выравниваем по левой стороне
-            self.checkbuttons.append((package, var, cb))
+            cb = tk.Checkbutton(check_buttons_frame_inner, text=package, variable=var)
+            cb.grid(row=row, column=col, padx=3, pady=3, sticky="w")
+            self.check_buttons.append((package, var, cb))
 
             col += 1
             if col == 4:
@@ -168,31 +167,30 @@ class PackageGeneratorApp:
         input_text = tk.Text(input_window)
         input_text.pack()
 
-        input_text.insert(tk.END, ", ".join(self.packages))  # Загружаем существующие пакеты через запятую
-        # Привязываем горячие клавиши
+        input_text.insert(tk.END, ", ".join(self.packages))
+
         input_text.bind("<Control-v>", self.paste)
         input_text.bind("<Control-a>", self.select_all)
 
         def update_packages():
             packages_input = input_text.get("1.0", tk.END).strip()
             self.packages = [pkg.strip() for pkg in packages_input.split(",")]
-            self.checkbuttons_frame.destroy()  # Удаляем старые чекбоксы
-            self.create_checkbuttons()  # Создаем новые чекбоксы
+            self.check_buttons_frame.destroy()
+            self.create_check_buttons()
             input_window.destroy()
 
         tk.Button(input_window, text="Сохранить", command=update_packages).pack()
 
     def generate_command(self):
-        selected_packages = [package for package, var, cb in self.checkbuttons if var.get() == 1]
+        selected_packages = [package for package, var, cb in self.check_buttons if var.get() == 1]
         selected_packages_str = ', '.join(selected_packages)
         command = f"clio generate-pkg-zip -p '{selected_packages_str}' -d '{self.path_var.get()}{self.package_name_var.get()}.zip'"
 
-        # Обновляем значение self.generated_command_var
         self.generated_command_var.set(command)
 
-        self.root.clipboard_clear()  # Очищаем буфер обмена
-        self.root.clipboard_append(command)  # Добавляем команду в буфер обмена
-        self.root.update()  # Обновляем буфер обмена
+        self.root.clipboard_clear()
+        self.root.clipboard_append(command)
+        self.root.update()
 
         print("Generated Command:", command)
 
@@ -202,20 +200,18 @@ class PackageGeneratorApp:
                 with open("setting_clio.json", "r") as file:
                     data = json.load(file)
                     self.path_var.set(data.get("path", ""))
-                    self.path_for_pkg_var.set(data.get("path_for_pkg", ""))  # Загружаем путь для пакетов
+                    self.path_for_pkg_var.set(data.get("path_for_pkg", ""))
                     self.package_name_var.set(data.get("package_name", ""))
                     self.packages = data.get("packages", [])
-                    self.path_to_pkg_var.set(data.get("path_to_pkg", ""))  # Загружаем значение для выпадающего списка
+                    self.path_to_pkg_var.set(data.get("path_to_pkg", ""))
             except FileNotFoundError:
                 pass
         else:
             self.package_name_var.set("")
 
     def save_settings(self):
-        # Удаление дубликатов из списка packages перед сохранением
         self.packages = list(set(self.packages))
 
-        selected_packages = [package for package, var, cb in self.checkbuttons if var.get() == 1]
         data = {
             "path": self.path_var.get(),
             "path_for_pkg": self.path_for_pkg_var.get(),
@@ -228,7 +224,7 @@ class PackageGeneratorApp:
 
     def run_command(self):
         self.generate_command()
-        self.start_time = time.time()  # Запоминаем текущее время перед выполнением команды
+        self.start_time = time.time()
 
         selected_path = self.path_to_pkg_combobox.get()
         command = self.generated_command_var.get()
@@ -239,13 +235,11 @@ class PackageGeneratorApp:
             if confirmation:
                 try:
                     os.chdir(selected_path)
-                    # Меняем режим индикатора выполнения в другом потоке
                     self.progressbar.config(mode='indeterminate')
                     self.progressbar.start()
                     start_time = time.time()
                     self.time_label.pack()
 
-                    # Внутри функции execute_command
                     update_time_thread = threading.Thread(target=self.update_execution_time)
                     update_time_thread.start()
 
@@ -254,13 +248,12 @@ class PackageGeneratorApp:
                             result = subprocess.run(['powershell.exe', '-Command', command], shell=True,
                                                     stdout=subprocess.PIPE,
                                                     stderr=subprocess.PIPE, text=True)
-                            # Вызываем метод с задержкой в 2 секунды
                             self.progressbar.stop()
                             self.progressbar.config(mode='determinate')
                             self.stop_timer_event.set()
                             self.time_label.pack_forget()
 
-                            end_time = time.time()  # Запоминаем текущее время после выполнения команды
+                            end_time = time.time()
                             execution_time = end_time - start_time
                             minutes = int(execution_time // 60)
                             fraction_minutes = execution_time % 60
@@ -276,11 +269,10 @@ class PackageGeneratorApp:
                             self.time_label.pack_forget()
                             print("Ошибка выполнения команды:", str(e))
                         finally:
-                            end_time = time.time()  # Запоминаем текущее время после выполнения команды
+                            end_time = time.time()
                             execution_time = end_time - start_time
                             print(execution_time)
 
-                    # Создаем поток для выполнения команды
                     command_thread = threading.Thread(target=execute_command)
                     command_thread.start()
                 except Exception as e:
