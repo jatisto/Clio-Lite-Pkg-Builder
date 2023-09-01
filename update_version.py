@@ -1,16 +1,16 @@
+import json
 import os
 import subprocess
 import zipfile
 from base64 import b64decode
 from distutils.version import LooseVersion
 from pathlib import Path
-
 import requests
 
-from settings import ConnectionSettings
 from utility_function import handle_errors
 
-nameApp = "PgSSR"
+nameApp = "ClioLitePkgBuilder"
+
 
 class Updater:
     def __init__(self):
@@ -66,7 +66,7 @@ class Updater:
 
     @handle_errors(log_file="update.log", text='load_auth_data_for_git')
     def load_auth_data_for_git(self):
-        data = ConnectionSettings.load_json("auth.json", "Auth")
+        data = self.load_json("auth.json", "Auth")
         self.username = data["username"]
         self.token = data["token"]
         self.repo = data["repo"]
@@ -106,3 +106,11 @@ class Updater:
         os.chdir(os.path.join(extract_path, f"{self.repo}-main"))
         subprocess.run(["python", "update.py", "build"], stdout=subprocess.DEVNULL,
                        creationflags=subprocess.CREATE_NO_WINDOW)
+
+    @staticmethod
+    def load_json(name_file, root_element):
+        try:
+            with open(name_file, "r") as json_file:
+                return json.load(json_file)[root_element]
+        except FileNotFoundError:
+            return []

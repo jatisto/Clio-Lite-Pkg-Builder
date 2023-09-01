@@ -3,12 +3,10 @@ import os
 import subprocess
 from sys import platform
 from cx_Freeze import setup, Executable
-import Constants
 from update_version import Updater
 
-name_app = 'PgSSR'
+name_app = 'ClioLitePkgBuilder'
 
-# Создаем парсер аргументов
 parser = argparse.ArgumentParser(description='Build script with version type')
 parser.add_argument('--ver', dest='version_type', choices=['major', 'minor', 'patch'],
                     help='Version type to increment: major, minor, or patch')
@@ -56,8 +54,17 @@ executables: list[Executable] = [
         uac_admin=True
     )]
 
+
+def list_include() -> object:
+    return [
+        ("auth.json", "auth.json"),
+        ("version.txt", "version.txt"),
+        ("icons", "icons"),
+    ]
+
+
 # Список файлов для включения в сборку
-include_files = Constants.list_include()
+include_files = list_include()
 
 # Параметры для создания установщика
 options = {
@@ -71,8 +78,8 @@ options = {
 setup(
     name=f"{name_app}",
     version=new_version,  # Используйте новую версию
-    description=f"Интерфейс для работы с pg_stat_statements. v.{new_version}",
-    author="Евгений Абдюшев",
+    description=f"A small utility for generating and running the clio command for dropping packages. v.{new_version}",
+    author="Evgeny Abdyushev",
     options=options,
     executables=executables
 )
@@ -87,5 +94,6 @@ subprocess.call(bat_file_path, shell=True)
 
 # Passing a new version to a PowerShell script
 ps1_file_path_version = os.path.join(os.path.dirname(__file__), "release_for_git.ps1")
-subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ps1_file_path_version, new_version],
-               shell=True)
+subprocess.run(
+    ["powershell", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ps1_file_path_version, new_version],
+    shell=True)

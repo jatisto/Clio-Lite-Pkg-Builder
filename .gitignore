@@ -165,4 +165,6 @@ cython_debug/
 /.idea/misc.xml
 /.idea/modules.xml
 /.idea/vcs.xml
-/setting_clio.json
+/setting.json
+/auth.json
+/.idea/encodings.xml

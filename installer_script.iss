@@ -1,9 +1,9 @@
-#define MyAppName "PgSSR"
-#define MyAppExeName "PgSSR.exe"
-#define ApplicationVersion GetVersionNumbersString('PgSSR.exe')
+#define MyAppName "ClioLitePkgBuilder"
+#define MyAppExeName "ClioLitePkgBuilder.exe"
+#define ApplicationVersion GetVersionNumbersString('ClioLitePkgBuilder.exe')
 
 [Setup]
-AppId = "3502D097-DF67-49DD-X98X-59F0866127QQ"
+AppId = "97302D097-DV67-47DD-X98X-59F0866129ZZ"
 AppName={#MyAppName}
 AppVerName={#MyAppName} {#ApplicationVersion}
 VersionInfoVersion={#ApplicationVersion}
