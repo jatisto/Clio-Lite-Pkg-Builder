@@ -1,15 +1,16 @@
 import datetime
-import time
-import tkinter as tk
-import threading
-from tkinter import ttk, messagebox
-import subprocess
 import json
 import os
+import subprocess
+import threading
+import time
+import tkinter as tk
+from tkinter import ttk, messagebox
 
-from ttkthemes.themed_style import ThemedStyle
+from utility_function import handle_errors
 
 
+@handle_errors(log_file="base.log", text='PackageGeneratorApp')
 class PackageGeneratorApp:
     def __init__(self, root):
         self.check_buttons_frame = None
@@ -214,7 +215,6 @@ class PackageGeneratorApp:
                     data = json.load(file)
                     self.path_var.set(data.get("path", ""))
                     self.path_for_pkg_var.set(data.get("path_for_pkg", ""))
-                    # self.package_name_var.set(data.get("package_name", ""))
                     self.packages = data.get("packages", [])
                     self.path_to_pkg_var.set(data.get("path_to_pkg", ""))
             except FileNotFoundError:

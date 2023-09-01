@@ -8,7 +8,7 @@ def main():
     root = ttk.Tk()
     style = ThemedStyle(root)
     style.set_theme("clam")
-    app = PackageGeneratorApp(root)
+    PackageGeneratorApp(root)
     root.iconbitmap('icons/icon.ico')
     root.mainloop()
 

@@ -44,7 +44,7 @@ new_version = f"{major}.{minor}.{patch}"
 # Параметры для исполняемого файла
 executables: list[Executable] = [
     Executable(
-        "base.py",
+        "main.py",
         base=base,
         target_name=f"{name_app}.exe",
         icon='icons/icon.ico',
