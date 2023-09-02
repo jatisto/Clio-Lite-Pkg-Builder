@@ -98,7 +98,6 @@ class PackageGeneratorApp:
         # --------------------------------------------------------------------------------------------------------------
         path_var = ttk.Entry(frame_1, cursor="ibeam", textvariable=self.path_var, style="My.TEntry")
         path_var.place(width=260, height=25, x=15, y=25)
-        self.set_placeholder(path_var, "D:\\Pkg\\")
         # --------------------------------------------------------------------------------------------------------------
         label_path = ttk.Label(frame_1, text="Наименование пакета", style="My.TLabel")
         label_path.place(width=145, height=17, x=284.5, y=5)
@@ -113,8 +112,8 @@ class PackageGeneratorApp:
         button_add_path = ttk.Button(frame_1, text="Добавить путь", command=self.add_path_for_pkg, style="My.TButton")
         button_add_path.place(width=100, height=27, x=602, y=23)
         # --------------------------------------------------------------------------------------------------------------
-        self.theme_button = ttk.Button(self.check_buttons_frame, text="Темно", command=self.toggle_theme,
-                                       compound="center", style="My.TButton")
+        self.theme_button = ttk.Button(self.check_buttons_frame, text="Dark", command=self.toggle_theme,
+                                       compound="center", style="My2.TButton")
         self.theme_button.place(width=70, height=27, x=715, y=24)
         # --------------------------------------------------------------------------------------------------------------
         label_selected_path = ttk.Label(frame_1, text="Путь до папки Pkg", style="My.TLabel")
@@ -153,6 +152,7 @@ class PackageGeneratorApp:
         self.time_label.pack_forget()
 
     def configure_styles(self, style, theme_style):
+        widget_colors = self.theme_colors[theme_style]
         for widget_font in ["TButton", "TCheckbutton", "TCombobox", "TEntry", "TFrame", "TLabel",
                             "TLabelframe", "TLabelFrame", "TMenubutton", "TNotebook", "TPanedwindow",
                             "TPanedWindow", "TProgressbar", "TRadiobutton", "TScale", "TScrollbar",
@@ -161,12 +161,18 @@ class PackageGeneratorApp:
                             font=("JetBrains Mono", 9))
 
         for widget_name in ["TCombobox", "TButton", "TEntry", "TLabel"]:
-            widget_colors = self.theme_colors[theme_style]
             style.configure(widget_name,
                             background=widget_colors["bg"],
                             foreground=widget_colors["fg"],
                             selectbackground=widget_colors["select_bg"],
                             selectforeground=widget_colors["select_fg"])
+
+        style.configure("My2.TButton",
+                        background=widget_colors["fg"],
+                        bg=widget_colors["fg"],
+                        selectbackground=widget_colors["select_fg"],
+                        selectforeground=widget_colors["select_bg"]
+                        )
 
     def toggle_theme(self):
         current_theme = self.style.theme_use()
@@ -174,7 +180,7 @@ class PackageGeneratorApp:
         style = ttk.Style()
         try:
             self.style.theme_use(new_theme)
-            self.theme_button.configure(text="Темно" if new_theme == self.dark_theme else "Светло")
+            self.theme_button.configure(text="Light" if new_theme == self.dark_theme else "Dark")
             self.apply_theme_to_checkboxes("dark" if new_theme == self.dark_theme else "light")
             self.progressbar.place(x=268, y=369 if new_theme == self.dark_theme else 362)
             self.is_dark = True if new_theme == self.dark_theme else False
@@ -439,23 +445,3 @@ class PackageGeneratorApp:
             fraction_minutes = execution_time % 60
             self.time_label.config(text=f"Время выполнения: {minutes:.0f}.{fraction_minutes:.0f} мин.")
             time.sleep(1)
-
-    @staticmethod
-    def set_placeholder(widget, placeholder_text):
-        def clear_placeholder(event):
-            if widget.get() == placeholder_text:
-                widget.delete(0, tk.END)
-                widget.configure(foreground="gray")
-
-        def restore_placeholder(event):
-            if not widget.get():
-                widget.insert(0, placeholder_text)
-                widget.configure(foreground="gray")
-
-        if not widget.get():
-            widget.insert(0, placeholder_text)
-            widget.configure(foreground="gray")
-            widget.tag_add("placeholder", "1.0", "end")
-
-        widget.bind("<FocusIn>", clear_placeholder)
-        widget.bind("<FocusOut>", restore_placeholder)
