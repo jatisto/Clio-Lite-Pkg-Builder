@@ -2,23 +2,26 @@ import datetime
 import json
 import os
 import subprocess
+import sys
 import threading
 import time
 import tkinter as tk
 from tkinter import ttk, messagebox
+
 from ttkthemes.themed_style import ThemedStyle
+
 from utility_function import handle_errors
 
 
 @handle_errors(log_file="base.log", text='PackageGeneratorApp')
 class PackageGeneratorApp:
     def __init__(self, root):
+        self.tooltip = None
         self.scrollbar = None
         self.check_buttons_frame_inner = None
         self.canvas = None
         self.theme_style = None
         self.theme_button = None
-        self.style = ThemedStyle(root)
         self.dark_theme = None
         self.light_theme = None
         self.check_buttons_frame = None
@@ -28,12 +31,14 @@ class PackageGeneratorApp:
         self.path_to_pkg_combobox = None
         self.progressbar = None
         self.root = root
-        self.root.title("Clio lite pkg builder")
         self.is_dark = False
+        self.is_not_theme = True
         self.root.minsize(800, 400)
         self.root.maxsize(800, 400)
         self.window_width = 800
         self.window_height = 400
+        self.style = ThemedStyle(root)
+        self.theme_colors = None
 
         self.screen_width = self.root.winfo_screenwidth()
         self.screen_height = self.root.winfo_screenheight()
@@ -56,9 +61,6 @@ class PackageGeneratorApp:
         self.path_for_pkg_var = tk.StringVar()
         self.path_to_pkg_var = tk.StringVar()
 
-        self.package_name_var = tk.StringVar()
-        self.package_name_var.set(f"{self.result_string}")
-
         self.check_buttons = []
 
         self.generated_command_var = tk.StringVar()
@@ -68,59 +70,105 @@ class PackageGeneratorApp:
         self.stop_timer_event = threading.Event()
         self.isStopTimer = False
 
-        self.style = ttk.Style()
+        self.package_name_var = tk.StringVar()
+
         self.load_settings()
 
-        self.theme_colors = {
-            "dark": {"bg": "#464646", "fg": "#efefef", "select_bg": "#efefef", "select_fg": "#464646",
-                     "high_light": "#6c6c6c", "font": "JetBrains Mono"},
-            "light": {"bg": "#efefef", "fg": "black", "select_bg": "#cacaca", "select_fg": "#464646",
-                      "high_light": "#cacaca", "font": "JetBrains Mono"}
-        }
+        # --------------------------------------------------------------------------------------------------------------
+        self.menu_bar = tk.Menu(root)
+        self.root.config(menu=self.menu_bar)
 
-        if self.is_dark:
-            self.style.theme_use(self.dark_theme)
+        self.file_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.file_menu.add_command(label="Выход", command=root.quit)
+        self.menu_bar.add_cascade(label="Меню", menu=self.file_menu)
+
+        self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.help_menu.add_command(label="Справка", command=self.show_help)
+        self.menu_bar.add_cascade(label="Помощь", menu=self.help_menu)
+        # --------------------------------------------------------------------------------------------------------------
+        if self.package_name_var.get() == "":
+            self.package_name_var.set(f"{self.result_string}")
+
+        if not self.is_not_theme:
+            self.root.title("Clio lite pkg builder [Turbo]")
         else:
-            self.style.theme_use(self.light_theme)
+            self.root.title("Clio lite pkg builder")
+
+        if not self.is_not_theme:
+            self.style = ttk.Style()
+
+            self.theme_colors = {
+                "dark": {"bg": "#464646", "fg": "#efefef", "select_bg": "#efefef", "select_fg": "#464646",
+                         "high_light": "#6c6c6c", "font": "JetBrains Mono"},
+                "light": {"bg": "#efefef", "fg": "black", "select_bg": "#cacaca", "select_fg": "#464646",
+                          "high_light": "#cacaca", "font": "JetBrains Mono"}
+            }
+            if self.is_dark:
+                self.style.theme_use(self.dark_theme)
+            else:
+                self.style.theme_use(self.light_theme)
 
         self.create_widgets()
 
     def create_widgets(self):
-        style = ttk.Style()
-        self.theme_style = "dark" if self.is_dark else "light"
-        self.configure_styles(style, self.theme_style)
+        self.package_name_var.trace_add("write", self.check_text)
+        if not self.is_not_theme:
+            style = ttk.Style()
+            self.theme_style = "dark" if self.is_dark else "light"
+            self.configure_styles(style, self.theme_style)
         # --------------------------------------------------------------------------------------------------------------
         frame_1 = ttk.Frame(self.root, style="My.TFrame")
         frame_1.place(width=900, height=500, x=0, y=1)
         # --------------------------------------------------------------------------------------------------------------
         label_package_name = ttk.Label(frame_1, text="Путь для сохранения пакета", style="My.TLabel")
-        label_package_name.place(width=250, height=15, x=15, y=5)
+        label_package_name.place(width=250, height=15, x=13, y=5)
         # --------------------------------------------------------------------------------------------------------------
         path_var = ttk.Entry(frame_1, cursor="ibeam", textvariable=self.path_var, style="My.TEntry")
         path_var.place(width=260, height=25, x=15, y=25)
         # --------------------------------------------------------------------------------------------------------------
-        label_path = ttk.Label(frame_1, text="Наименование пакета", style="My.TLabel")
-        label_path.place(width=145, height=17, x=284.5, y=5)
+        if not self.is_not_theme:
+            label_path = ttk.Label(frame_1, text="Наименование пакета", style="My.TLabel")
+            label_path.place(width=145, height=17, x=284.5, y=5)
+
+            package_name_var = ttk.Entry(frame_1, cursor="ibeam", textvariable=self.package_name_var, style="My.TEntry")
+            package_name_var.place(width=185, height=25, x=284.5, y=25)
+        else:
+            label_path = ttk.Label(frame_1, text="Наименование пакета", style="My.TLabel")
+            label_path.place(width=145, height=17, x=288.5, y=5)
+
+            package_name_var = ttk.Entry(frame_1, cursor="ibeam", textvariable=self.package_name_var, style="My.TEntry")
+            package_name_var.place(width=255, height=25, x=290.5, y=25)
         # --------------------------------------------------------------------------------------------------------------
-        package_name_var = ttk.Entry(frame_1, cursor="ibeam", textvariable=self.package_name_var, style="My.TEntry")
-        package_name_var.place(width=185, height=25, x=284.5, y=25)
+        if not self.is_not_theme:
+            button_open_packages = ttk.Button(frame_1, text="Добавить пакеты", command=self.open_packages_input,
+                                              style="My.TButton")
+            button_open_packages.place(width=110, height=27, x=480.5, y=23)
+        else:
+            button_open_packages = ttk.Button(frame_1, text="Добавить пакеты", command=self.open_packages_input,
+                                              style="My.TButton")
+            button_open_packages.place(width=110, height=27, x=560.5, y=23)
         # --------------------------------------------------------------------------------------------------------------
-        button_open_packages = ttk.Button(frame_1, text="Добавить пакеты", command=self.open_packages_input,
-                                          style="My.TButton")
-        button_open_packages.place(width=110, height=27, x=480.5, y=23)
+        if not self.is_not_theme:
+            button_add_path = ttk.Button(frame_1, text="Добавить путь", command=self.add_path_for_pkg,
+                                         style="My.TButton")
+            button_add_path.place(width=100, height=27, x=602, y=23)
+        else:
+            button_add_path = ttk.Button(frame_1, text="Добавить путь", command=self.add_path_for_pkg,
+                                         style="My.TButton")
+            button_add_path.place(width=100, height=27, x=685, y=23)
         # --------------------------------------------------------------------------------------------------------------
-        button_add_path = ttk.Button(frame_1, text="Добавить путь", command=self.add_path_for_pkg, style="My.TButton")
-        button_add_path.place(width=100, height=27, x=602, y=23)
-        # --------------------------------------------------------------------------------------------------------------
-        self.theme_button = ttk.Button(self.check_buttons_frame, text="Dark", command=self.toggle_theme,
-                                       compound="center", style="My2.TButton")
-        self.theme_button.place(width=70, height=27, x=715, y=24)
+        if not self.is_not_theme:
+            self.theme_button = ttk.Button(self.check_buttons_frame, text="Dark", command=self.toggle_theme,
+                                           compound="center", style="My2.TButton")
+            self.theme_button.place(width=70, height=27, x=715, y=24)
         # --------------------------------------------------------------------------------------------------------------
         label_selected_path = ttk.Label(frame_1, text="Путь до папки Pkg", style="My.TLabel")
-        label_selected_path.place(width=168, height=17, x=15, y=54)
+        label_selected_path.place(width=168, height=17, x=11, y=54)
         # --------------------------------------------------------------------------------------------------------------
-        self.path_to_pkg_combobox = ttk.Combobox(self.root, values=self.path_for_pkg_var.get().split(","), width=50,
-                                                 style="My.TCombobox")
+        values = [item.strip() for item in self.path_for_pkg_var.get().split(",")]
+
+        self.path_to_pkg_combobox = ttk.Combobox(self.root, values=values, width=50, style="My.TCombobox")
+
         self.path_to_pkg_combobox.set(self.path_to_pkg_var.get())
         self.path_to_pkg_combobox.place(width=771, height=25, x=14, y=74)
         self.path_to_pkg_combobox.bind("<<ComboboxSelected>>", self.on_path_selected)
@@ -151,7 +199,41 @@ class PackageGeneratorApp:
         self.time_label = ttk.Label(self.root, text="Время выполнения: 0.0 мин.")
         self.time_label.pack_forget()
 
+    def check_text(self, *args):
+        entered_text = self.package_name_var.get()
+        if entered_text.endswith("_save"):
+            self.set_one_attribute("package_name_var", self.package_name_var.get()[:-5])
+            self.package_name_var.set(self.package_name_var.get()[:-5])
+        if entered_text.endswith("_clear"):
+            self.set_one_attribute("package_name_var", "")
+            self.package_name_var.set(f"{self.result_string}")
+        if entered_text == "not turbo":
+            self.is_not_theme = True
+            self.set_one_attribute("is_not_theme", self.is_not_theme)
+            self.load_settings()
+            messagebox.showinfo("Info",
+                                f"Режим [Turbo] отключён.\nПриложение будет закрыто. Для включения режима [Turbo] введите [turbo]")
+            self.restart_program()
+
+        if entered_text == "turbo":
+            self.is_not_theme = False
+            self.set_one_attribute("is_not_theme", self.is_not_theme)
+            self.load_settings()
+            messagebox.showinfo("Info",
+                                f"Режим [Turbo] включён.\nПриложение будет закрыто. Для отключения режима [Turbo] введите [not turbo]")
+            self.restart_program()
+        else:
+            pass
+
+    @staticmethod
+    def restart_program():
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
+
     def configure_styles(self, style, theme_style):
+        if self.is_not_theme:
+            pass
+
         widget_colors = self.theme_colors[theme_style]
         for widget_font in ["TButton", "TCheckbutton", "TCombobox", "TEntry", "TFrame", "TLabel",
                             "TLabelframe", "TLabelFrame", "TMenubutton", "TNotebook", "TPanedwindow",
@@ -175,6 +257,9 @@ class PackageGeneratorApp:
                         )
 
     def toggle_theme(self):
+        if self.is_not_theme:
+            pass
+
         current_theme = self.style.theme_use()
         new_theme = self.dark_theme if current_theme != self.dark_theme else self.light_theme
         style = ttk.Style()
@@ -209,11 +294,14 @@ class PackageGeneratorApp:
         self.path_to_pkg_var.set(self.path_to_pkg_combobox.get())
 
     def create_check_buttons(self):
-        self.theme_style = "dark" if self.is_dark else "light"
         self.check_buttons_frame = ttk.Frame(self.root)
         self.check_buttons_frame.place(width=800, height=220, x=0, y=107)
 
-        self.canvas = tk.Canvas(self.check_buttons_frame, bg=self.theme_colors[self.theme_style]["bg"])
+        if not self.is_not_theme:
+            self.theme_style = "dark" if self.is_dark else "light"
+            self.canvas = tk.Canvas(self.check_buttons_frame, bg=self.theme_colors[self.theme_style]["bg"])
+        else:
+            self.canvas = tk.Canvas(self.check_buttons_frame)
         self.canvas.pack(side="left", fill="both", expand=True)
 
         self.check_buttons_frame_inner = ttk.Frame(self.canvas)
@@ -240,13 +328,17 @@ class PackageGeneratorApp:
         self.check_buttons_frame_inner.update_idletasks()
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         self.canvas.bind_all("<MouseWheel>", self.on_mousewheel)
-        self.apply_theme_to_checkboxes(self.theme_style)
+        if not self.is_not_theme:
+            self.apply_theme_to_checkboxes(self.theme_style)
 
     def on_mousewheel(self, event):
         # Обработка события колесика мыши для прокрутки
         self.canvas.yview_scroll(-1 * (event.delta // 120), "units")
 
     def apply_theme_to_checkboxes(self, theme):
+        if self.is_not_theme:
+            pass
+
         widget_color = self.theme_colors[theme]
 
         checkbox_background = widget_color["bg"]
@@ -258,39 +350,65 @@ class PackageGeneratorApp:
         for package, var, cb in self.check_buttons:
             cb.configure(bg=checkbox_background, fg=checkbox_foreground, selectcolor=checkbox_background)
 
-    def create_input_window(self, title, initial_text, on_save):
-        input_window = tk.Toplevel(self.root)
+    def show_help(self):
+        help_text = (
+            '1) Что бы включить режим Turbo! Нужно в поле для ввода: [Наименование пакета], написать слово [turbo]\n'
+            'Для того чтобы отключить нужно ввести [not turbo].\n\n'
+            '2) Что бы сохранить название добавьте в конце строки [_save | _clear].')
 
-        # Создайте экземпляр ThemedStyle для окна
-        style = ThemedStyle(input_window)
-        self.theme_style = "dark" if self.is_dark else "light"
-        self.configure_styles(style, self.theme_style)
+        self.create_window("Справка", help_text, show_save_button=False, width=600, height=200)
 
-        # Выберите тему в зависимости от self.is_dark
-        if self.is_dark:
-            style.theme_use(self.dark_theme)
-        else:
-            style.theme_use(self.light_theme)
+    def create_window(self, title, initial_text, on_save=None, show_save_button=True, width=600, height=300):
+        window = tk.Toplevel(self.root)
 
-        input_window.iconbitmap('icons/icon.ico')
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        icon_path = os.path.join(script_dir, 'icons', 'icon.ico')
+        window.iconbitmap(icon_path)
+        window.title(title)
 
-        input_text = tk.Text(input_window)
+        # Рассчитываем координаты для размещения окна по центру родительского окна
+        window_width = width
+        window_height = height
+        parent_x = self.root.winfo_x()
+        parent_y = self.root.winfo_y()
+        parent_width = self.root.winfo_width()
+        parent_height = self.root.winfo_height()
 
-        self.theme_style = "dark" if self.is_dark else "light"
-        widget = self.theme_colors[self.theme_style]
-        input_text.configure(background=widget["bg"], foreground=widget["fg"], font=(widget["font"], 12))
+        x = parent_x + (parent_width - window_width) // 2
+        y = parent_y + (parent_height - window_height) // 2
+
+        # Устанавливаем позицию нового окна
+        window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+        if not self.is_not_theme:
+            style = ThemedStyle(window)
+            self.theme_style = "dark" if self.is_dark else "light"
+            self.configure_styles(style, self.theme_style)
+
+            if self.is_dark:
+                style.theme_use(self.dark_theme)
+            else:
+                style.theme_use(self.light_theme)
+
+        input_text = tk.Text(window)
+        if not self.is_not_theme:
+            self.theme_style = "dark" if self.is_dark else "light"
+            widget = self.theme_colors[self.theme_style]
+            input_text.configure(background=widget["bg"], foreground=widget["fg"], font=(widget["font"], 12))
 
         input_text.pack()
         input_text.insert(tk.END, initial_text)
         input_text.bind("<Control-v>", self.paste)
         input_text.bind("<Control-a>", self.select_all)
 
-        def save_and_close():
-            text = input_text.get("1.0", tk.END).strip()
-            on_save(text)
-            input_window.destroy()
+        if on_save and show_save_button:
+            def save_and_close():
+                text = input_text.get("1.0", tk.END).strip()
+                on_save(text)
+                window.destroy()
 
-        ttk.Button(input_window, text="Сохранить", command=save_and_close, style="My.TButton").pack()
+            (ttk.Button(window, text="Сохранить", command=save_and_close, style="My.TButton")
+             .place(width=115, height=27, x=465, y=258))
 
     def open_packages_input(self):
         initial_text = ", ".join(self.packages)
@@ -301,7 +419,7 @@ class PackageGeneratorApp:
             self.save_settings()
             self.create_check_buttons()
 
-        self.create_input_window("Введите пакеты", initial_text, on_save)
+        self.create_window("Введите пакеты", initial_text, on_save)
 
     def update_path_combobox(self):
         result_string = self.delete_duplicate_for_str()
@@ -316,15 +434,13 @@ class PackageGeneratorApp:
             self.update_path_combobox()
             self.save_settings()
 
-        self.create_input_window("Введите путь для пакета", initial_text, on_save)
+        self.create_window("Введите путь для пакета", initial_text, on_save)
 
     def generate_command(self):
         selected_packages = [package for package, var, cb in self.check_buttons if var.get() == 1]
         selected_packages_str = ', '.join(selected_packages)
-        path = self.path_var.get()
-        if not path.endswith('/'):
-            path += '/'
-        command = f"clio generate-pkg-zip -p '{selected_packages_str}' -d '{path}{self.package_name_var.get()}.zip'"
+        path = os.path.join(self.path_var.get(), '')
+        command = f"clio generate-pkg-zip -p '{selected_packages_str}' -d '{path}{self.package_name_var.get()}_clpb.zip'"
 
         self.generated_command_var.set(command)
 
@@ -343,10 +459,12 @@ class PackageGeneratorApp:
                     self.path_for_pkg_var.set(data.get("path_for_pkg", ""))
                     self.packages = data.get("packages", [])
                     self.path_to_pkg_var.set(data.get("path_to_pkg", ""))
-                    self.is_dark = data.get("is_dark", True)
+                    self.is_dark = data.get("is_dark"),
+                    self.package_name_var.set(data.get("package_name", "")),
+                    self.is_not_theme = data.get("is_not_theme", False)
                     self.theme_colors = data.get("theme_color", "")
-                    self.dark_theme = data.get("dark_theme", "equilux")
-                    self.light_theme = data.get("light_theme", "plastik")
+                    self.dark_theme = data.get("dark_theme", "equilux") if None else "equilux"
+                    self.light_theme = data.get("light_theme", "plastik") if None else "plastik"
             except FileNotFoundError:
                 pass
         else:
@@ -361,8 +479,8 @@ class PackageGeneratorApp:
             "path": self.path_var.get(),
             "path_for_pkg": result_string,
             "path_to_pkg": self.path_to_pkg_var.get(),
-            "package_name": self.package_name_var.get(),
             "is_dark": self.is_dark,
+            "is_not_theme": self.is_not_theme,
             "packages": self.packages,
             "theme_color": self.theme_colors,
             "dark_theme": self.dark_theme,
@@ -371,17 +489,27 @@ class PackageGeneratorApp:
         with open("setting.json", "w") as file:
             json.dump(data, file)
 
+    @staticmethod
+    def set_one_attribute(name_attribute, value):
+        with open("setting.json", "r") as file:
+            data = json.load(file)
+
+        data[name_attribute] = value
+
+        with open("setting.json", "w") as file:
+            json.dump(data, file, indent=4)
+
     def delete_duplicate_for_str(self):
-        input_list = self.path_for_pkg_var.get().split(",\n")
-        unique_list = list(set(input_list))
-        result_string = ",\n".join(unique_list)
+        input_string = self.path_for_pkg_var.get()
+        unique_lines = list(set(input_string.splitlines()))
+        result_string = ",".join(unique_lines)
         return result_string
 
     def run_command(self):
         self.generate_command()
         self.start_time = time.time()
 
-        selected_path = self.path_to_pkg_combobox.get()
+        selected_path = self.path_to_pkg_var.get()
         command = self.generated_command_var.get()
 
         if selected_path and command:
