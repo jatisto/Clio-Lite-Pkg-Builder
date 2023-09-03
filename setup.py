@@ -14,7 +14,7 @@ args, remaining_argv = parser.parse_known_args()
 
 # Если аргумент --ver не был передан, то установить по умолчанию "patch"
 if not args.version_type:
-    args.version_type = 'minor'
+    args.version_type = 'patch'
 
 base = None
 
