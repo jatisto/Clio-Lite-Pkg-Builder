@@ -8,12 +8,10 @@ import time
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from ttkthemes.themed_style import ThemedStyle
-
-from utility_function import handle_errors
+from utility_function import basis_handle_errors
 
 
-@handle_errors(log_file="base.log", text='PackageGeneratorApp')
+@basis_handle_errors(text='PackageGeneratorApp')
 class PackageGeneratorApp:
     def __init__(self, root):
         self.tooltip = None
@@ -70,7 +68,6 @@ class PackageGeneratorApp:
         self.package_name_var = tk.StringVar()
 
         self.load_settings()
-        print(self.package_name_var.get())
         # --------------------------------------------------------------------------------------------------------------
         self.menu_bar = tk.Menu(root)
         self.root.config(menu=self.menu_bar)
@@ -226,9 +223,9 @@ class PackageGeneratorApp:
     def create_window(self, title, initial_text, on_save=None, show_save_button=True, width=600, height=300):
         window = tk.Toplevel(self.root)
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        icon_path = os.path.join(script_dir, 'icons', 'icon.ico')
-        window.iconbitmap(icon_path)
+        # script_dir = os.path.dirname(os.path.abspath(__file__))
+        # icon_path = os.path.join(script_dir, 'icons', 'icon.ico')
+        window.iconbitmap("icons/icon.ico")
         window.title(title)
 
         window_width = width
