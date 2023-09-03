@@ -8,7 +8,7 @@ import time
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from utility_function import basis_handle_errors
+from utility_function import basis_handle_errors, Log
 
 
 @basis_handle_errors(text='PackageGeneratorApp')
@@ -220,13 +220,13 @@ class PackageGeneratorApp:
 
         self.create_window("Справка", help_text, show_save_button=False, width=600, height=200)
 
+    @basis_handle_errors(text='create_window')
     def create_window(self, title, initial_text, on_save=None, show_save_button=True, width=600, height=300):
         window = tk.Toplevel(self.root)
-
-        # script_dir = os.path.dirname(os.path.abspath(__file__))
-        # icon_path = os.path.join(script_dir, 'icons', 'icon.ico')
-        window.iconbitmap("icons/icon.ico")
         window.title(title)
+        icon_path = os.path.join('icons', 'icon.ico')
+        Log.info(icon_path, "icon_path")
+        window.iconbitmap(icon_path)
 
         window_width = width
         window_height = height
@@ -354,6 +354,7 @@ class PackageGeneratorApp:
                                                f"Вы уверены, что хотите выполнить команду в каталоге:\n{selected_path}\n\nКоманда:\n{command}")
             if confirmation:
                 try:
+                    current_directory = os.getcwd()
                     os.chdir(selected_path)
                     self.progressbar.config(mode='indeterminate')
                     self.progressbar.start()
@@ -392,6 +393,7 @@ class PackageGeneratorApp:
                             end_time = time.time()
                             execution_time = end_time - start_time
                             print(execution_time)
+                            os.chdir(current_directory)
 
                     command_thread = threading.Thread(target=execute_command)
                     command_thread.start()
