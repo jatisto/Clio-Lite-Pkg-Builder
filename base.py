@@ -14,33 +14,26 @@ from utility_function import basis_handle_errors, Log
 @basis_handle_errors(text='PackageGeneratorApp')
 class PackageGeneratorApp:
     def __init__(self, root):
-        self.tooltip = None
         self.scrollbar = None
         self.check_buttons_frame_inner = None
         self.canvas = None
-        self.theme_style = None
-        self.theme_button = None
-        self.dark_theme = None
-        self.light_theme = None
         self.check_buttons_frame = None
         self.input_text = ""
         self.time_label = None
         self.generated_command_label = None
         self.path_to_pkg_combobox = None
         self.progressbar = None
+
         self.root = root
+        self.root.title("Clio lite pkg builder")
         self.root.minsize(800, 400)
         self.root.maxsize(800, 400)
         self.window_width = 800
         self.window_height = 400
-        self.theme_colors = None
-        self.root.title("Clio lite pkg builder")
         self.screen_width = self.root.winfo_screenwidth()
         self.screen_height = self.root.winfo_screenheight()
-
         self.x_position = (self.screen_width - self.window_width) // 2
         self.y_position = (self.screen_height - self.window_height) // 2
-
         self.root.geometry(f"{self.window_width}x{self.window_height}+{self.x_position}+{self.y_position}")
 
         self.packages = []
