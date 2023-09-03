@@ -23,6 +23,7 @@ class PackageGeneratorApp:
         self.check_buttons_frame = None
         self.input_text = ""
         self.time_label = None
+        self.is_default = True
         self.generated_command_label = None
         self.path_to_pkg_combobox = None
         self.progressbar = None
@@ -88,6 +89,8 @@ class PackageGeneratorApp:
             {"key_sequence": "<Control-s>", "command": self.save_settings_key},
             {"key_sequence": "<Control-r>", "command": self.run_command_key},
             {"key_sequence": "<Control-b>", "command": self.generate_command_key},
+
+            # {"key_sequence": "<Escape>", "command": lambda x: root.destroy()},
         ]
 
         for item in self.key_commands:
@@ -182,10 +185,14 @@ class PackageGeneratorApp:
         entered_text = self.package_name_var.get()
         if entered_text.endswith("_save"):
             self.save_to_settings_one_attribute("package_name_var", self.package_name_var.get()[:-5])
+            self.save_to_settings_one_attribute("is_default", True)
             self.package_name_var.set(self.package_name_var.get()[:-5])
+            self.is_default = True
         if entered_text.endswith("_clear"):
             self.save_to_settings_one_attribute("package_name_var", "")
+            self.save_to_settings_one_attribute("is_default", False)
             self.package_name_var.set(f"{self.result_string}")
+            self.is_default = False
         if entered_text.endswith("_update"):
             self.set_default_name_pkg()
             self.package_name_var.set(f"{self.result_string}")
@@ -199,8 +206,9 @@ class PackageGeneratorApp:
         self.select_all_checkboxes()
 
     def select_all_checkboxes(self):
+        first_checkbox_state = self.check_buttons[0][1].get()
         for package, var, cb in self.check_buttons:
-            var.set(1 - var.get())
+            var.set(1 - first_checkbox_state)
 
     def is_at_least_one_checkbox_selected(self):
         for package, var, cb in self.check_buttons:
@@ -303,6 +311,8 @@ class PackageGeneratorApp:
     def create_window(self, title, initial_text, on_save=None, show_save_button=True, width=600, height=300,
                       is_fix_size=False, editable=True):
         window = tk.Toplevel(self.root, width=width, height=height)
+        window.focus_set()  # Установить фокус на окно
+        window.bind("<Escape>", lambda x: window.destroy())
 
         if is_fix_size:
             window.maxsize(width=width, height=height)
@@ -383,7 +393,7 @@ class PackageGeneratorApp:
         selected_packages = [package for package, var, cb in self.check_buttons if var.get() == 1]
         selected_packages_str = ', '.join(selected_packages)
         path = os.path.join(self.path_var.get(), '')
-        command = f"clio generate-pkg-zip -p '{selected_packages_str}' -d '{path}{self.package_name_var.get()}_clpb.zip'"
+        command = f"clio generate-pkg-zip -p '{selected_packages_str}' -d '{path}{self.package_name_var.get()}.zip'"
 
         self.generated_command_var.set(command)
 
@@ -401,6 +411,7 @@ class PackageGeneratorApp:
                     self.path_var.set(data.get("path", ""))
                     self.path_for_pkg_var.set(data.get("path_for_pkg", ""))
                     self.packages = data.get("packages", [])
+                    self.is_default = data.get("is_default", True)
                     self.path_to_pkg_var.set(data.get("path_to_pkg", ""))
                     self.package_name_var.set(data.get("package_name_var", ""))
             except FileNotFoundError:
@@ -449,6 +460,10 @@ class PackageGeneratorApp:
             messagebox.showinfo("Сборка", "Для запуска команды нужно выбрать хотя бы один пакет.")
             return
 
+        if self.check_zip_file_in_directory(self.package_name_var.get()):
+            messagebox.showinfo("Информация", f"Сборка с именем [{self.package_name_var.get()}] уже существует.")
+            return
+
         self.generate_command()
         current_directory = os.getcwd()
 
@@ -458,13 +473,17 @@ class PackageGeneratorApp:
             self.stop_timer_event.set()
             self.time_label.pack_forget()
 
+            if not self.is_default:
+                self.set_default_name_pkg()
+                self.package_name_var.set(f"{self.result_string}")
+
             end_time = time.time()
             execution_time = end_time - start_time
             minutes = int(execution_time // 60)
             fraction_minutes = execution_time % 60
 
-            output_message = result.stdout + "\n\n" + (f"Сборка пакета [{self.package_name_var}] завершилась успешно!"
-                                                       f"\nВремя выполнения: {minutes:.0f}.{fraction_minutes:.0f} мин.")
+            output_message = result.stdout + (f"Сборка пакета [{self.package_name_var.get()}] завершилась успешно!"
+                                              f"\nВремя выполнения: {minutes:.0f}.{fraction_minutes:.0f} мин.")
             if result.stderr:
                 output_message += "Стандартный вывод ошибок:\n" + result.stderr
             messagebox.showinfo("Результат выполнения команды", output_message)
@@ -477,10 +496,10 @@ class PackageGeneratorApp:
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE, text=True)
 
-                handle_command_execution(result, start_time)
+                handle_command_execution(result, self.start_time)
 
             except Exception as ex:
-                self.handle_command_error(ex, start_time)
+                self.handle_command_error(ex, self.start_time)
 
             finally:
                 os.chdir(current_directory)  # Возвращаемся в исходную директорию после выполнения команды
@@ -496,7 +515,7 @@ class PackageGeneratorApp:
                     os.chdir(selected_path)
                     self.progressbar.config(mode='indeterminate')
                     self.progressbar.start()
-                    start_time = time.time()
+                    self.start_time = time.time()
                     self.time_label.pack()
 
                     update_time_thread = threading.Thread(target=self.update_execution_time)
@@ -506,7 +525,7 @@ class PackageGeneratorApp:
                     command_thread.start()
 
                 except Exception as e:
-                    self.handle_command_error(e, start_time)
+                    self.handle_command_error(e, self.start_time)
 
     # Метод для обработки ошибок выполнения команды
     def handle_command_error(self, error, start_time):
@@ -527,3 +546,11 @@ class PackageGeneratorApp:
             fraction_minutes = execution_time % 60
             self.time_label.config(text=f"Время выполнения: {minutes:.0f}.{fraction_minutes:.0f} мин.")
             time.sleep(1)
+
+    def check_zip_file_in_directory(self, filename):
+        files = os.listdir(self.path_var.get())
+
+        for file in files:
+            if file == filename + ".zip":
+                return True
+        return False
