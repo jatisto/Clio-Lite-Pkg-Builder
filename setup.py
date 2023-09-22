@@ -92,8 +92,8 @@ with open("build/version.txt", "w") as version_file:
 bat_file_path = os.path.join(os.path.dirname(__file__), "build_exe.bat")
 subprocess.call(bat_file_path, shell=True)
 
-# Passing a new version to a PowerShell script
-ps1_file_path_version = os.path.join(os.path.dirname(__file__), "release_for_git.ps1")
-subprocess.run(
-    ["powershell", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ps1_file_path_version, new_version],
-    shell=True)
+# # Passing a new version to a PowerShell script
+# ps1_file_path_version = os.path.join(os.path.dirname(__file__), "release_for_git.ps1")
+# subprocess.run(
+#     ["powershell", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ps1_file_path_version, new_version],
+#     shell=True)

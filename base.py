@@ -433,6 +433,15 @@ class PackageGeneratorApp:
             "path_to_pkg": self.path_to_pkg_var.get(),
             "packages": self.packages,
         }
+
+        if self.is_default:
+            data["is_default"] = self.is_default
+            data["package_name_var"] = self.package_name_var.get()
+        else:
+            data["is_default"] = False
+            if "package_name_var" in data:
+                del data["package_name_var"]
+
         with open("setting.json", "w") as file:
             json.dump(data, file)
 
