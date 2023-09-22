@@ -263,7 +263,10 @@ class PackageGeneratorApp:
         row = 0
         col = 0
         self.check_buttons = []
-        for package in self.packages:
+
+        sorted_packages = sorted(self.packages, key=lambda p: p.lower())  # Сортировка по алфавиту
+
+        for package in sorted_packages:
             var = tk.IntVar()
             cb = tk.Checkbutton(self.check_buttons_frame_inner, text=package, variable=var)
             cb.grid(row=row, column=col, padx=10, pady=5, sticky="w")
