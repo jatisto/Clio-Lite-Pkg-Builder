@@ -1,2 +1,4 @@
 requests~=2.31.0
 ttkthemes~=3.2.2
+customtkinter~=5.2.0
+CTkMessagebox~=2.5

@@ -3,17 +3,33 @@ import json
 import os
 import platform
 import subprocess
+import sys
 import threading
 import time
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 
+import customtkinter as ctk
+from CTkMessagebox import CTkMessagebox
+
+from CTkMenuBar import *
 from utility_function import basis_handle_errors
 
+font = ("MesloLGS NF", 14)
 
-@basis_handle_errors(text='PackageGeneratorApp')
-class PackageGeneratorApp:
-    def __init__(self, root):
+
+@basis_handle_errors(text='App')
+class App(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.appearance_mode_option_menu = None
+        self.theme = tk.StringVar()
+        self.theme.set("system")
+        self.default_theme = tk.StringVar()
+        self.default_theme.set("dark-blue")
+        self.template_date_name = tk.StringVar()
+        self.template_date_name.set("%d.%m.%Y_%H.%M.%S")
+        self.root_frame = None
         self.result_string = None
         self.current_datetime = None
         self.formatted_datetime = None
@@ -28,12 +44,13 @@ class PackageGeneratorApp:
         self.path_to_pkg_combobox = None
         self.progressbar = None
 
-        self.root = root
+        self.root = self
         self.root.title("Clio lite pkg builder")
-        self.root.minsize(800, 400)
-        self.root.maxsize(800, 400)
-        self.window_width = 800
-        self.window_height = 400
+        self.root.iconbitmap('icons/icon.ico')
+        self.root.minsize(900, 415)
+        self.root.maxsize(900, 415)
+        self.window_width = 900
+        self.window_height = 415
         self.screen_width = self.root.winfo_screenwidth()
         self.screen_height = self.root.winfo_screenheight()
         self.x_position = (self.screen_width - self.window_width) // 2
@@ -64,20 +81,31 @@ class PackageGeneratorApp:
 
         self.load_settings()
         # --------------------------------------------------------------------------------------------------------------
-        self.menu_bar = tk.Menu(root)
-        self.root.config(menu=self.menu_bar)
+        ctk.set_appearance_mode(self.theme.get())
+        ctk.set_default_color_theme(self.default_theme.get())
 
-        self.file_menu = tk.Menu(self.menu_bar, tearoff=0)
-        self.file_menu.add_command(label="Открыть папку сохранения [Ctrl+o]", command=self.open_folder)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        self.menu_bar = CTkTitleMenu(self.root, width=100, padx=0)
+        self.button_1 = self.menu_bar.add_cascade("Меню", font=font)
+        self.button_2 = self.menu_bar.add_cascade("Помощь", font=font)
+
+        self.dropdown1 = CustomDropdownMenu(widget=self.button_1, font=ctk.CTkFont("MesloLGS NF", 14), border_width=0,
+                                            corner_radius=5)
+        self.dropdown1.add_option(option="Открыть папку сохранения [Ctrl+o]", command=self.open_folder, font=font,
+                                  border_width=0, corner_radius=5)
+        self.dropdown1.add_separator()
         self.root.bind("<Control-o>", self.open_folder_key)
-        self.file_menu.add_command(label="Выход [Ctrl+q]", command=self.quit_program)
-        self.root.bind("<Control-q>", self.quit_program)
-        self.menu_bar.add_cascade(label="Меню", menu=self.file_menu)
+        self.dropdown1.add_option(option="Выход [Ctrl+q]", command=self.quit_program, font=font, border_width=0,
+                                  corner_radius=5)
+        self.root.bind("<Control-q>", self.quit_program_key)
 
-        self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
-        self.help_menu.add_command(label="Справка [Ctrl+h]", command=self.show_help)
+        self.dropdown2 = CustomDropdownMenu(widget=self.button_2, font=ctk.CTkFont("MesloLGS NF", 14), border_width=0,
+                                            corner_radius=5)
+        self.dropdown2.add_option(option="Справка [Ctrl+h]", command=self.show_help, font=font, border_width=0,
+                                  corner_radius=5)
         self.root.bind("<Control-h>", self.show_help_key)
-        self.menu_bar.add_cascade(label="Помощь", menu=self.help_menu)
 
         self.current_key_sequence = []
 
@@ -89,8 +117,6 @@ class PackageGeneratorApp:
             {"key_sequence": "<Control-s>", "command": self.save_settings_key},
             {"key_sequence": "<Control-r>", "command": self.run_command_key},
             {"key_sequence": "<Control-b>", "command": self.generate_command_key},
-
-            # {"key_sequence": "<Escape>", "command": lambda x: root.destroy()},
         ]
 
         for item in self.key_commands:
@@ -100,7 +126,6 @@ class PackageGeneratorApp:
         # --------------------------------------------------------------------------------------------------------------
         if self.package_name_var.get() == "":
             self.package_name_var.set(f"{self.result_string}")
-
         self.create_widgets()
 
     @staticmethod
@@ -119,70 +144,99 @@ class PackageGeneratorApp:
         self.formatted_datetime = self.current_datetime.strftime("%d.%m.%Y_%H.%M.%S")
 
     def create_widgets(self):
+        self.root_frame = ctk.CTkFrame(self.root, border_width=0, corner_radius=0, width=900, height=450)
+        self.root_frame.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
         self.package_name_var.trace_add("write", self.check_text)
-        # --------------------------------------------------------------------------------------------------------------
-        frame_1 = ttk.Frame(self.root)
-        frame_1.place(width=900, height=500, x=0, y=1)
-        # --------------------------------------------------------------------------------------------------------------
-        label_package_name = ttk.Label(frame_1, text="Путь для сохранения пакета")
-        label_package_name.place(width=250, height=15, x=13, y=5)
-        # --------------------------------------------------------------------------------------------------------------
-        path_var = ttk.Entry(frame_1, cursor="ibeam", textvariable=self.path_var)
-        path_var.place(width=260, height=25, x=15, y=25)
-        # --------------------------------------------------------------------------------------------------------------
-        label_path = ttk.Label(frame_1, text="Наименование пакета")
-        label_path.place(width=145, height=17, x=288.5, y=5)
 
-        package_name_var = ttk.Entry(frame_1, cursor="ibeam", textvariable=self.package_name_var)
-        package_name_var.place(width=255, height=25, x=290.5, y=25)
         # --------------------------------------------------------------------------------------------------------------
-        button_open_packages = ttk.Button(frame_1, text="Добавить пакеты", command=self.open_packages_input,
-                                          style="My.TButton")
-        button_open_packages.place(width=110, height=27, x=560.5, y=23)
+        frame_1 = ctk.CTkFrame(self.root_frame, border_width=0, corner_radius=0, width=900, height=450)
+        frame_1.grid(row=0, column=0, columnspan=4, padx=(0, 0), pady=(0, 0), sticky="nsew")
         # --------------------------------------------------------------------------------------------------------------
-        button_add_path = ttk.Button(frame_1, text="Добавить путь", command=self.add_path_for_pkg,
-                                     style="My.TButton")
-        button_add_path.place(width=100, height=27, x=685, y=23)
+        path_var = ctk.CTkEntry(master=frame_1, border_width=1, font=font,
+                                textvariable=self.path_var,
+                                placeholder_text="Путь для сохранения пакета", width=300, height=30)
+        path_var.grid(row=1, column=0, padx=(15, 5), pady=(10, 10), sticky="nsew")
         # --------------------------------------------------------------------------------------------------------------
-        label_selected_path = ttk.Label(frame_1, text="Путь до папки Pkg")
-        label_selected_path.place(width=168, height=17, x=11, y=54)
+        package_name_var = ctk.CTkEntry(master=frame_1, font=font, border_width=1, textvariable=self.package_name_var,
+                                        placeholder_text="Наименование пакета",
+                                        width=250, height=30)
+        package_name_var.grid(row=1, column=2, padx=(10, 10), pady=(10, 10), sticky="nsew")
         # --------------------------------------------------------------------------------------------------------------
+        button_open_packages = ctk.CTkButton(master=frame_1, width=135, text="Добавить пакеты",
+                                             command=self.open_packages_input)
+        button_open_packages.grid(row=1, column=3, padx=(10, 5), pady=(10, 10), sticky="nsew")
+        # --------------------------------------------------------------------------------------------------------------
+        button_add_path = ctk.CTkButton(master=frame_1, width=135, text="Добавить путь",
+                                        command=self.add_path_for_pkg)
+        button_add_path.grid(row=1, column=4, padx=(10, 5), pady=(10, 10), sticky="nsew")
+        # --------------------------------------------------------------------------------------------------------------
+        frame_2 = ctk.CTkFrame(self.root_frame, border_width=0, corner_radius=0)
+        frame_2.grid(row=1, column=0, columnspan=4, padx=(0, 0), pady=(5, 0), sticky="nsew")
+
         values = [item.strip() for item in self.path_for_pkg_var.get().split(",")]
 
-        self.path_to_pkg_combobox = ttk.Combobox(self.root, values=values, width=50)
+        self.path_to_pkg_combobox = ctk.CTkComboBox(master=frame_2, font=font, values=values, width=870, height=30,
+                                                    border_width=1,
+                                                    dropdown_font=font, corner_radius=5, button_hover_color="gray",
+                                                    dropdown_hover_color="#4b4b4b")
 
         self.path_to_pkg_combobox.set(self.path_to_pkg_var.get())
-        self.path_to_pkg_combobox.place(width=771, height=25, x=14, y=74)
+        self.path_to_pkg_combobox.grid(row=2, column=0, padx=(15, 15), pady=(10, 10), sticky="nsew")
         self.path_to_pkg_combobox.bind("<<ComboboxSelected>>", self.on_path_selected)
-        # --------------------------------------------------------------------------------------------------------------
-        self.generated_command_label = tk.Label(self.root, textvariable=self.generated_command_var, anchor="s")
-        self.generated_command_label.place(width=800, height=25, x=0, y=326)
         # --------------------------------------------------------------------------------------------------------------
         self.create_check_buttons()
         # --------------------------------------------------------------------------------------------------------------
-        button_generate_command = ttk.Button(self.root, text="Запустить", command=self.run_command)
-        button_generate_command.place(width=115, height=27, x=14, y=360)
-        # --------------------------------------------------------------------------------------------------------------
-        button_select_all = ttk.Button(self.root, text="Выделить все", command=self.select_all_checkboxes,
-                                       style="My.TButton")
-        button_select_all.place(width=115, height=27, x=140, y=360)
-        # --------------------------------------------------------------------------------------------------------------
-        button_generate_command = ttk.Button(self.root, text="Собрать строку", command=self.generate_command,
-                                             style="My.TButton")
-        button_generate_command.place(width=115, height=27, x=516, y=360)
-        # --------------------------------------------------------------------------------------------------------------
-        button_save_settings = ttk.Button(self.root, text="Сохранить настройки", command=self.save_settings,
-                                          style="My.TButton")
-        button_save_settings.place(width=141, height=27, x=645, y=360)
-        # --------------------------------------------------------------------------------------------------------------
-        self.progressbar = ttk.Progressbar(self.root, mode='determinate', length=235)
-        self.progressbar.place(x=268, y=362)
-        # --------------------------------------------------------------------------------------------------------------
-        self.time_label = ttk.Label(self.root, text="Сборка началась: 0.0 мин.")
+        frame_3 = ctk.CTkFrame(self.root_frame, width=860, height=100)
+        frame_3.grid(row=4, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
+        #
+        # self.generated_command_label = ctk.CTkLabel(master=frame_3, textvariable=self.generated_command_var)
+        # self.generated_command_label.grid(row=0, column=0, padx=(15, 15), pady=(5, 5), sticky="nsew")
+
+        self.time_label = ctk.CTkLabel(frame_3, text="Сборка началась: 0.0 мин.")
         self.time_label.pack_forget()
+
+        self.appearance_mode_option_menu = ctk.CTkOptionMenu(master=frame_3, width=145, button_color="#4b4b4b",
+                                                             values=["Light", "Dark", "System"],
+                                                             command=self.change_appearance_mode_event)
+
+        self.appearance_mode_option_menu.grid(row=0, column=0, columnspan=1, padx=(737, 0), pady=(5, 5), sticky="nsew")
+
+        self.appearance_mode_option_menu.set(self.theme.get())
+        # --------------------------------------------------------------------------------------------------------------
+        frame_4 = ctk.CTkFrame(self.root_frame)
+        frame_4.grid(row=5, column=0, columnspan=5, padx=(0, 0), pady=(5, 0), sticky="nsew")
+
+        button_generate_command = ctk.CTkButton(master=frame_4, text="Запустить", command=self.run_command)
+        button_generate_command.grid(row=0, column=0, padx=(15, 15), pady=(5, 5), sticky="nsew")
+        # --------------------------------------------------------------------------------------------------------------
+        button_select_all = ctk.CTkButton(master=frame_4, text="Выделить все", command=self.select_all_checkboxes)
+        button_select_all.grid(row=0, column=1, padx=(0, 15), pady=(5, 5), sticky="nsew")
+        # --------------------------------------------------------------------------------------------------------------
+        self.progressbar = ttk.Progressbar(master=frame_4, mode='determinate', length=240)
+        self.progressbar.grid(row=0, column=2, padx=(0, 15), pady=(5, 5), sticky="nsew")
+        # --------------------------------------------------------------------------------------------------------------
+        button_generate_command = ctk.CTkButton(master=frame_4, text="Собрать строку", command=self.generate_command)
+        button_generate_command.grid(row=0, column=3, padx=(0, 15), pady=(5, 5), sticky="nsew")
+        # --------------------------------------------------------------------------------------------------------------
+        button_save_settings = ctk.CTkButton(master=frame_4, text="Сохранить настройки", command=self.save_settings)
+        button_save_settings.grid(row=0, column=4, padx=(0, 15), pady=(5, 5), sticky="nsew")
 
     def check_text(self, *args):
         entered_text = self.package_name_var.get()
+        if entered_text.endswith("_blue"):
+            self.save_to_settings_one_attribute("default_theme", 'dark-blue')
+            ctk.set_default_color_theme(self.default_theme.get())
+            self.restart_app()
+        if entered_text.endswith("_green"):
+            self.save_to_settings_one_attribute("default_theme", 'green')
+            ctk.set_default_color_theme(self.default_theme.get())
+            self.restart_app()
+        if entered_text.endswith("_temp"):
+            str_value = self.package_name_var.get()
+            temp = str_value.rstrip("_temp")
+            if "%" in temp:
+                self.save_to_settings_one_attribute("template_date_name", temp)
+                self.restart_app()
         if entered_text.endswith("_save"):
             self.save_to_settings_one_attribute("package_name_var", self.package_name_var.get()[:-5])
             self.save_to_settings_one_attribute("is_default", True)
@@ -199,7 +253,11 @@ class PackageGeneratorApp:
         else:
             pass
 
-    def quit_program(self, event):
+    def quit_program_key(self, event):
+
+        self.root.quit()
+
+    def quit_program(self):
         self.root.quit()
 
     def select_all_checkboxes_key(self, event):
@@ -247,16 +305,17 @@ class PackageGeneratorApp:
         self.path_to_pkg_var.set(self.path_to_pkg_combobox.get())
 
     def create_check_buttons(self):
-        self.check_buttons_frame = ttk.Frame(self.root)
-        self.check_buttons_frame.place(width=800, height=220, x=0, y=107)
-
-        self.canvas = tk.Canvas(self.check_buttons_frame)
+        self.check_buttons_frame = ctk.CTkFrame(self.root_frame, border_width=0)
+        self.check_buttons_frame.grid(row=2, column=0, padx=(15, 15), pady=(10, 10), sticky="nsew")
+        color_canvas = "#dbdbdb" if self.theme.get() == "Light" else "#2b2b2b"
+        self.canvas = ctk.CTkCanvas(self.check_buttons_frame, width=860, height=150, bg=color_canvas, borderwidth=0,
+                                    highlightthickness=0)
         self.canvas.pack(side="left", fill="both", expand=True)
 
-        self.check_buttons_frame_inner = ttk.Frame(self.canvas)
+        self.check_buttons_frame_inner = ctk.CTkFrame(self.canvas)
         self.canvas.create_window((0, 0), window=self.check_buttons_frame_inner, anchor="nw")
 
-        self.scrollbar = ttk.Scrollbar(self.check_buttons_frame, orient="vertical", command=self.canvas.yview)
+        self.scrollbar = ctk.CTkScrollbar(self.check_buttons_frame, orientation="vertical", command=self.canvas.yview)
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.scrollbar.pack(side="right", fill="y")
 
@@ -268,12 +327,12 @@ class PackageGeneratorApp:
 
         for package in sorted_packages:
             var = tk.IntVar()
-            cb = tk.Checkbutton(self.check_buttons_frame_inner, text=package, variable=var)
+            cb = ctk.CTkCheckBox(self.check_buttons_frame_inner, text=package, variable=var, font=font)
             cb.grid(row=row, column=col, padx=10, pady=5, sticky="w")
             self.check_buttons.append((package, var, cb))
 
             col += 1
-            if col == 4:
+            if col == 3:
                 col = 0
                 row += 1
 
@@ -303,19 +362,25 @@ class PackageGeneratorApp:
             "[Ctrl+q] - Выход\n\n"
             "Команды которые можно выполнять в поле ввода [Наименование пакета]:\n"
             "(? вводить команды нужно в конце текста [pkg_v1_save])\n"
-            "[_save | _clear | _update]\n\n"
+            "[_save | _clear | _update | _blue | _green]\n\n"
             "[_save] - сохраняет введённое наименование пакета в файл настроек.\nПри следующим открытии приложения в поле [Наименование пакета] будет выведено сохранённое наименование пакета\n\n"
             "[_clear] - чистит введённое наименование пакета в файл настроек.\nПри следующим открытии приложения в поле [Наименование пакета] будет выведено дефолтное наименование пакета [packages_<Текущая дата и время в формате [%d.%m.%Y_%H.%M.%S]>]\n\n"
-            "[_update] - обновляет поле [Наименование пакета] дефолтным наименованием [packages_<Текущая дата и время в формате [%d.%m.%Y_%H.%M.%S]>]")
+            "[_update] - обновляет поле [Наименование пакета] дефолтным наименованием [packages_<Текущая дата и время в формате [%d.%m.%Y_%H.%M.%S]>]\n\n"
+            "[_blue] - устанавливает цвета элементов в синий цвет\n\n"
+            "[_green] - устанавливает цвета элементов в зелёный цвет")
 
-        self.create_window("Справка", help_text, show_save_button=False, width=600, height=400, editable=False)
+        self.create_window("Справка", help_text, show_save_button=False, width=900, height=415, editable=False)
 
     @basis_handle_errors(text='create_window')
-    def create_window(self, title, initial_text, on_save=None, show_save_button=True, width=600, height=300,
+    def create_window(self, title, initial_text, on_save=None, show_save_button=True, width=900, height=415,
                       is_fix_size=False, editable=True):
-        window = tk.Toplevel(self.root, width=width, height=height)
-        window.focus_set()  # Установить фокус на окно
-        window.bind("<Escape>", lambda x: window.destroy())
+        window = ctk.CTkToplevel(self, width=width, height=height)
+
+        window.grid_rowconfigure(0, weight=1)
+        window.grid_columnconfigure(0, weight=1)
+
+        window.after(100, window.lift)
+        window.bind("<Escape>", lambda destroy: window.destroy())
 
         if is_fix_size:
             window.maxsize(width=width, height=height)
@@ -337,13 +402,15 @@ class PackageGeneratorApp:
 
         window.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-        input_text = tk.Text(window, width=width, height=height)
+        frame_5 = ctk.CTkFrame(window, width=width - 15, height=height - 15)
+        frame_5.grid(row=0, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
 
-        input_text.pack()
+        input_text = ctk.CTkTextbox(window, width=width, height=height, font=font)
+        input_text.grid(row=0, column=0, padx=(5, 5), pady=(0, 0), sticky="nsew")
         input_text.insert(tk.END, initial_text)
 
         if not editable:
-            input_text.config(state="disabled")
+            input_text.configure(state="disabled")
         else:
             input_text.bind("<Control-v>", self.paste)
             input_text.bind("<Control-a>", self.select_all)
@@ -354,8 +421,8 @@ class PackageGeneratorApp:
                 on_save(text)
                 window.destroy()
 
-            (ttk.Button(window, text="Сохранить", command=save_and_close)
-             .place(width=115, height=27, x=465, y=258))
+            (ctk.CTkButton(window, text="Сохранить", command=save_and_close, height=30)
+             .grid(row=0, column=0, padx=(765, 15), pady=(365, 15), sticky="nsew"))
 
     def open_packages_input_key(self, event):
         self.open_packages_input()
@@ -417,6 +484,9 @@ class PackageGeneratorApp:
                     self.is_default = data.get("is_default", True)
                     self.path_to_pkg_var.set(data.get("path_to_pkg", ""))
                     self.package_name_var.set(data.get("package_name_var", ""))
+                    self.theme.set(data.get("theme", ""))
+                    self.default_theme.set(data.get("default_theme", "dark-blue"))
+                    self.template_date_name.set(data.get("template_date_name", "%d.%m.%Y_%H.%M.%S"))
             except FileNotFoundError:
                 pass
         else:
@@ -435,6 +505,9 @@ class PackageGeneratorApp:
             "path_for_pkg": result_string,
             "path_to_pkg": self.path_to_pkg_var.get(),
             "packages": self.packages,
+            "theme": self.theme.get(),
+            "default_theme": self.default_theme.get(),
+            "template_date_name": self.template_date_name.get(),
         }
 
         if self.is_default:
@@ -469,11 +542,12 @@ class PackageGeneratorApp:
 
     def run_command(self):
         if not self.is_at_least_one_checkbox_selected():
-            messagebox.showinfo("Сборка", "Для запуска команды нужно выбрать хотя бы один пакет.")
+            CTkMessagebox(title="Сборка", message="Для запуска команды нужно выбрать хотя бы один пакет.")
             return
 
         if self.check_zip_file_in_directory(self.package_name_var.get()):
-            messagebox.showinfo("Информация", f"Сборка с именем [{self.package_name_var.get()}] уже существует.")
+            CTkMessagebox(title="Информация",
+                          message=f"Сборка с именем [{self.package_name_var.get()}] уже существует.")
             return
 
         self.generate_command()
@@ -498,7 +572,7 @@ class PackageGeneratorApp:
                                               f"\nВремя выполнения: {minutes:.0f}.{fraction_minutes:.0f} мин.")
             if result.stderr:
                 output_message += "Стандартный вывод ошибок:\n" + result.stderr
-            messagebox.showinfo("Результат выполнения команды", output_message)
+            CTkMessagebox(title="Результат выполнения команды", message=output_message)
 
         def execute_command_internal():
             try:
@@ -520,15 +594,18 @@ class PackageGeneratorApp:
         selected_path = self.path_to_pkg_var.get()
         command = self.generated_command_var.get()
         if selected_path and command:
-            confirmation = messagebox.askyesno("Подтверждение",
-                                               f"Вы уверены, что хотите выполнить команду в каталоге:\n{selected_path}\n\nКоманда:\n{command}")
-            if confirmation:
+            confirmation = CTkMessagebox(title="Подтверждение",
+                                         message=f"Вы уверены, что хотите выполнить команду в каталоге:\n{selected_path}\n\nКоманда:\n{command}",
+                                         option_1="Да", option_2="Нет", button_width=85, button_height=30, font=font,
+                                         width=600, height=200)
+            response = confirmation.get()
+            if response == "Да":
                 try:
                     os.chdir(selected_path)
                     self.progressbar.config(mode='indeterminate')
                     self.progressbar.start()
                     self.start_time = time.time()
-                    self.time_label.pack()
+                    self.time_label.grid(row=0, column=0, padx=(15, 15), pady=(5, 5), sticky="nsew")
 
                     update_time_thread = threading.Thread(target=self.update_execution_time)
                     update_time_thread.start()
@@ -556,7 +633,7 @@ class PackageGeneratorApp:
             execution_time = end_time - self.start_time
             minutes = int(execution_time // 60)
             fraction_minutes = execution_time % 60
-            self.time_label.config(text=f"Время выполнения: {minutes:.0f}.{fraction_minutes:.0f} мин.")
+            self.time_label.configure(text=f"Время выполнения: {minutes:.0f}.{fraction_minutes:.0f} мин.")
             time.sleep(1)
 
     def check_zip_file_in_directory(self, filename):
@@ -566,3 +643,14 @@ class PackageGeneratorApp:
             if file == filename + ".zip":
                 return True
         return False
+
+    def change_appearance_mode_event(self, new_appearance_mode):
+        self.save_to_settings_one_attribute("theme", new_appearance_mode)
+        ctk.set_appearance_mode(new_appearance_mode)
+        self.restart_app()
+
+    def restart_app(self):
+        python = sys.executable
+        self.destroy()
+        subprocess.call([python, "main.py"])
+
