@@ -69,8 +69,6 @@ class App(ctk.CTk):
         self.packages = []
         self.selected_packages = []
 
-        self.set_default_name_pkg()
-
         self.path_var = tk.StringVar()
         self.path_var.set("")
 
@@ -89,6 +87,7 @@ class App(ctk.CTk):
         self.package_name_var = tk.StringVar()
 
         self.load_settings()
+        self.set_default_name_pkg()
         # --------------------------------------------------------------------------------------------------------------
         ctk.set_appearance_mode(self.theme.get())
         ctk.set_default_color_theme(self.default_theme.get())
@@ -152,7 +151,7 @@ class App(ctk.CTk):
 
     def get_current_date_whit_format(self):
         self.current_datetime = datetime.datetime.now()
-        self.formatted_datetime = self.current_datetime.strftime("%d.%m.%Y_%H.%M.%S")
+        self.formatted_datetime = self.current_datetime.strftime(self.template_date_name.get())
 
     def create_widgets(self):
         self.root_frame = ctk.CTkFrame(self.root, border_width=0, corner_radius=0, width=900, height=450)
@@ -199,18 +198,12 @@ class App(ctk.CTk):
         # --------------------------------------------------------------------------------------------------------------
         self.frame_3 = ctk.CTkFrame(self.root_frame, width=860, height=100)
         self.frame_3.grid(row=4, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
-        #
-        # self.generated_command_label = ctk.CTkLabel(master=frame_3, textvariable=self.generated_command_var)
-        # self.generated_command_label.grid(row=0, column=0, padx=(15, 15), pady=(5, 5), sticky="nsew")
-
-        self.time_label = ctk.CTkLabel(self.frame_3, text="Сборка началась: 0.0 мин.")
-        self.time_label.pack_forget()
 
         self.appearance_mode_option_menu = ctk.CTkOptionMenu(master=self.frame_3, width=145, button_color="#4b4b4b",
                                                              values=["Light", "Dark", "System"],
                                                              command=self.change_appearance_mode_event)
 
-        self.appearance_mode_option_menu.grid(row=0, column=1, columnspan=2, padx=(737, 0), pady=(5, 5), sticky="nsew")
+        self.appearance_mode_option_menu.grid(row=0, column=0, columnspan=1, padx=(737, 0), pady=(5, 5), sticky="nsew")
 
         self.appearance_mode_option_menu.set(self.theme.get())
         # --------------------------------------------------------------------------------------------------------------
@@ -245,12 +238,15 @@ class App(ctk.CTk):
             self.save_to_settings_one_attribute("default_theme", 'green')
             ctk.set_default_color_theme(self.default_theme.get())
             self.restart_app()
-        if entered_text.endswith("_temp"):
+        if entered_text.endswith("_date_template"):
             str_value = self.package_name_var.get()
-            temp = str_value.rstrip("_temp")
+            temp = str_value.rstrip("_date_template")
             if "%" in temp:
                 self.save_to_settings_one_attribute("template_date_name", temp)
                 self.restart_app()
+        if entered_text.endswith("_date_template_clear"):
+            self.save_to_settings_one_attribute("template_date_name", "%d.%m.%Y_%H.%M.%S")
+            self.restart_app()
         if entered_text.endswith("_save"):
             self.save_to_settings_one_attribute("package_name_var", self.package_name_var.get()[:-5])
             self.save_to_settings_one_attribute("is_default", True)
@@ -376,12 +372,14 @@ class App(ctk.CTk):
             "[Ctrl+q] - Выход\n\n"
             "Команды которые можно выполнять в поле ввода [Наименование пакета]:\n"
             "(? вводить команды нужно в конце текста [pkg_v1_save])\n"
-            "[_save | _clear | _update | _blue | _green]\n\n"
+            "[_save | _clear | _update | _blue | _green | _date_template]\n\n"
             "[_save] - сохраняет введённое наименование пакета в файл настроек.\nПри следующим открытии приложения в поле [Наименование пакета] будет выведено сохранённое наименование пакета\n\n"
             "[_clear] - чистит введённое наименование пакета в файл настроек.\nПри следующим открытии приложения в поле [Наименование пакета] будет выведено дефолтное наименование пакета [packages_<Текущая дата и время в формате [%d.%m.%Y_%H.%M.%S]>]\n\n"
             "[_update] - обновляет поле [Наименование пакета] дефолтным наименованием [packages_<Текущая дата и время в формате [%d.%m.%Y_%H.%M.%S]>]\n\n"
             "[_blue] - устанавливает цвета элементов в синий цвет\n\n"
-            "[_green] - устанавливает цвета элементов в зелёный цвет")
+            "[_green] - устанавливает цвета элементов в зелёный цвет\n\n"
+            "[_date_template] - устанавливает шаблон даты для поля [Наименование пакета].\nПо умолчанию выбран шаблон [%d.%m.%Y_%H.%M.%S].\nДля установки другого шаблона, введите его в поле [Шаблон даты (%d.%m.%Y)], после введите _date_template. [%d.%m.%Y_date_template]\n\n"
+            "[_date_template_clear] - вернёт шаблон по умолчанию [%d.%m.%Y_%H.%M.%S].\n\n")
 
         self.create_window("Справка", help_text, show_save_button=False, width=900, height=415, editable=False)
 
@@ -571,7 +569,6 @@ class App(ctk.CTk):
             self.progressbar.stop()
             self.progressbar.config(mode='determinate')
             self.stop_timer_event.set()
-            self.time_label.pack_forget()
 
             if not self.is_default:
                 self.set_default_name_pkg()
@@ -619,11 +616,6 @@ class App(ctk.CTk):
                     self.progressbar.config(mode='indeterminate')
                     self.progressbar.start()
                     self.start_time = time.time()
-                    self.time_label.grid(row=0, column=0, padx=(15, 15), pady=(5, 5), sticky="nsew")
-
-                    update_time_thread = threading.Thread(target=self.update_execution_time)
-                    update_time_thread.start()
-
                     command_thread = threading.Thread(target=execute_command_internal)
                     command_thread.start()
 
@@ -635,20 +627,10 @@ class App(ctk.CTk):
         self.progressbar.stop()
         self.progressbar.config(mode='determinate')
         self.stop_timer_event.set()
-        self.time_label.pack_forget()
         print("Ошибка выполнения команды:", str(error))
         end_time = time.time()
         execution_time = end_time - start_time
         print(execution_time)
-
-    def update_execution_time(self):
-        while not self.stop_timer_event.is_set():
-            end_time = time.time()
-            execution_time = end_time - self.start_time
-            minutes = int(execution_time // 60)
-            fraction_minutes = execution_time % 60
-            self.time_label.configure(text=f"Время выполнения: {minutes:.0f}.{fraction_minutes:.0f} мин.")
-            time.sleep(1)
 
     def check_zip_file_in_directory(self, filename):
         files = os.listdir(self.path_var.get())
