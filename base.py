@@ -54,7 +54,7 @@ class App(ctk.CTk):
         self.progressbar = None
 
         self.root = self
-        self.root.title(f"Clio lite pkg builder {version_app}")
+        self.root.title(f"Clio lite pkg builder v{version_app}")
         self.root.iconbitmap('icons/icon.ico')
         self.root.minsize(900, 415)
         self.root.maxsize(900, 415)
