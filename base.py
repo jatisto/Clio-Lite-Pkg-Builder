@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 import tkinter as tk
+import webbrowser
 from tkinter import ttk
 
 import customtkinter as ctk
@@ -14,14 +15,22 @@ from CTkMessagebox import CTkMessagebox
 
 from CTkMenuBar import *
 from utility_function import basis_handle_errors
+from update_version import Updater
 
 font = ("MesloLGS NF", 14)
+
+updater = Updater()
+version_app = updater.get_remote_version()
 
 
 @basis_handle_errors(text='App')
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
+        self.frame_3 = None
+        self.frame_2 = None
+        self.frame_4 = None
+        self.download_link_btn = None
         self.appearance_mode_option_menu = None
         self.theme = tk.StringVar()
         self.theme.set("system")
@@ -45,7 +54,7 @@ class App(ctk.CTk):
         self.progressbar = None
 
         self.root = self
-        self.root.title("Clio lite pkg builder")
+        self.root.title(f"Clio lite pkg builder {version_app}")
         self.root.iconbitmap('icons/icon.ico')
         self.root.minsize(900, 415)
         self.root.maxsize(900, 415)
@@ -126,6 +135,8 @@ class App(ctk.CTk):
         # --------------------------------------------------------------------------------------------------------------
         if self.package_name_var.get() == "":
             self.package_name_var.set(f"{self.result_string}")
+
+        self.after(500, self.delayed_check_for_updates)
         self.create_widgets()
 
     @staticmethod
@@ -170,12 +181,12 @@ class App(ctk.CTk):
                                         command=self.add_path_for_pkg)
         button_add_path.grid(row=1, column=4, padx=(10, 5), pady=(10, 10), sticky="nsew")
         # --------------------------------------------------------------------------------------------------------------
-        frame_2 = ctk.CTkFrame(self.root_frame, border_width=0, corner_radius=0)
-        frame_2.grid(row=1, column=0, columnspan=4, padx=(0, 0), pady=(5, 0), sticky="nsew")
+        self.frame_2 = ctk.CTkFrame(self.root_frame, border_width=0, corner_radius=0)
+        self.frame_2.grid(row=1, column=0, columnspan=4, padx=(0, 0), pady=(5, 0), sticky="nsew")
 
         values = [item.strip() for item in self.path_for_pkg_var.get().split(",")]
 
-        self.path_to_pkg_combobox = ctk.CTkComboBox(master=frame_2, font=font, values=values, width=870, height=30,
+        self.path_to_pkg_combobox = ctk.CTkComboBox(master=self.frame_2, font=font, values=values, width=870, height=30,
                                                     border_width=1,
                                                     dropdown_font=font, corner_radius=5, button_hover_color="gray",
                                                     dropdown_hover_color="#4b4b4b")
@@ -186,40 +197,43 @@ class App(ctk.CTk):
         # --------------------------------------------------------------------------------------------------------------
         self.create_check_buttons()
         # --------------------------------------------------------------------------------------------------------------
-        frame_3 = ctk.CTkFrame(self.root_frame, width=860, height=100)
-        frame_3.grid(row=4, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
+        self.frame_3 = ctk.CTkFrame(self.root_frame, width=860, height=100)
+        self.frame_3.grid(row=4, column=0, padx=(0, 0), pady=(0, 0), sticky="nsew")
         #
         # self.generated_command_label = ctk.CTkLabel(master=frame_3, textvariable=self.generated_command_var)
         # self.generated_command_label.grid(row=0, column=0, padx=(15, 15), pady=(5, 5), sticky="nsew")
 
-        self.time_label = ctk.CTkLabel(frame_3, text="Сборка началась: 0.0 мин.")
+        self.time_label = ctk.CTkLabel(self.frame_3, text="Сборка началась: 0.0 мин.")
         self.time_label.pack_forget()
 
-        self.appearance_mode_option_menu = ctk.CTkOptionMenu(master=frame_3, width=145, button_color="#4b4b4b",
+        self.appearance_mode_option_menu = ctk.CTkOptionMenu(master=self.frame_3, width=145, button_color="#4b4b4b",
                                                              values=["Light", "Dark", "System"],
                                                              command=self.change_appearance_mode_event)
 
-        self.appearance_mode_option_menu.grid(row=0, column=0, columnspan=1, padx=(737, 0), pady=(5, 5), sticky="nsew")
+        self.appearance_mode_option_menu.grid(row=0, column=1, columnspan=2, padx=(737, 0), pady=(5, 5), sticky="nsew")
 
         self.appearance_mode_option_menu.set(self.theme.get())
         # --------------------------------------------------------------------------------------------------------------
-        frame_4 = ctk.CTkFrame(self.root_frame)
-        frame_4.grid(row=5, column=0, columnspan=5, padx=(0, 0), pady=(5, 0), sticky="nsew")
+        self.frame_4 = ctk.CTkFrame(self.root_frame)
+        self.frame_4.grid(row=5, column=0, columnspan=5, padx=(0, 0), pady=(5, 0), sticky="nsew")
 
-        button_generate_command = ctk.CTkButton(master=frame_4, text="Запустить", command=self.run_command)
+        button_generate_command = ctk.CTkButton(master=self.frame_4, text="Запустить", command=self.run_command)
         button_generate_command.grid(row=0, column=0, padx=(15, 15), pady=(5, 5), sticky="nsew")
         # --------------------------------------------------------------------------------------------------------------
-        button_select_all = ctk.CTkButton(master=frame_4, text="Выделить все", command=self.select_all_checkboxes)
+        button_select_all = ctk.CTkButton(master=self.frame_4, text="Выделить все", command=self.select_all_checkboxes)
         button_select_all.grid(row=0, column=1, padx=(0, 15), pady=(5, 5), sticky="nsew")
         # --------------------------------------------------------------------------------------------------------------
-        self.progressbar = ttk.Progressbar(master=frame_4, mode='determinate', length=240)
+        self.progressbar = ttk.Progressbar(master=self.frame_4, mode='determinate', length=240)
         self.progressbar.grid(row=0, column=2, padx=(0, 15), pady=(5, 5), sticky="nsew")
         # --------------------------------------------------------------------------------------------------------------
-        button_generate_command = ctk.CTkButton(master=frame_4, text="Собрать строку", command=self.generate_command)
+        button_generate_command = ctk.CTkButton(master=self.frame_4, text="Собрать строку",
+                                                command=self.generate_command)
         button_generate_command.grid(row=0, column=3, padx=(0, 15), pady=(5, 5), sticky="nsew")
         # --------------------------------------------------------------------------------------------------------------
-        button_save_settings = ctk.CTkButton(master=frame_4, text="Сохранить настройки", command=self.save_settings)
+        button_save_settings = ctk.CTkButton(master=self.frame_4, text="Сохранить настройки",
+                                             command=self.save_settings)
         button_save_settings.grid(row=0, column=4, padx=(0, 15), pady=(5, 5), sticky="nsew")
+        # --------------------------------------------------------------------------------------------------------------
 
     def check_text(self, *args):
         entered_text = self.package_name_var.get()
@@ -654,3 +668,36 @@ class App(ctk.CTk):
         self.destroy()
         subprocess.call([python, "main.py"])
 
+    def loading_file(self):
+        """
+        Открывает ссылку для загрузки файла.
+
+        :return: None
+        """
+
+        webbrowser.open(updater.get_download_link())
+        self.after(200, lambda: self.download_link_btn.pack_forget())
+
+    def check_for_updates(self):
+        """
+        Проверяет наличие обновлений приложения.
+
+        :return: None
+        """
+        update_available, local_version = updater.check_update()
+
+        if update_available:
+            confirmation = CTkMessagebox(title="Обновление",
+                                         message=f"Доступна новая версия программы [{update_available}].\n\n",
+                                         option_1="Скачать", option_2="Отменить", button_width=85, button_height=30,
+                                         font=font)
+            response = confirmation.get()
+            if response == "Скачать":
+                self.loading_file()
+
+    def delayed_check_for_updates(self):
+        """
+        Выполняет отложенную проверку наличия обновлений приложения.
+        :return: None
+        """
+        self.check_for_updates()
