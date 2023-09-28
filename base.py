@@ -688,7 +688,7 @@ class App(ctk.CTk):
 
         if update_available:
             confirmation = CTkMessagebox(title="Обновление",
-                                         message=f"Доступна новая версия программы [{update_available}].\n\n",
+                                         message=f"Доступна новая версия программы [v{local_version}].\n\n",
                                          option_1="Скачать", option_2="Отменить", button_width=85, button_height=30,
                                          font=font)
             response = confirmation.get()
