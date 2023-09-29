@@ -233,24 +233,29 @@ class App(ctk.CTk):
         if entered_text.endswith("_blue"):
             self.save_to_settings_one_attribute("default_theme", 'dark-blue')
             ctk.set_default_color_theme(self.default_theme.get())
-            self.restart_app()
+            self.message_restart()
         if entered_text.endswith("_green"):
             self.save_to_settings_one_attribute("default_theme", 'green')
             ctk.set_default_color_theme(self.default_theme.get())
-            self.restart_app()
+            self.message_restart()
         if entered_text.endswith("_date_template"):
             str_value = self.package_name_var.get()
-            temp = str_value.rstrip("_date_template")
+            temp = str_value.replace("_date_template", "")
+            print(temp)
             if "%" in temp:
                 self.save_to_settings_one_attribute("template_date_name", temp)
-                self.restart_app()
+                self.message_restart()
         if entered_text.endswith("_date_template_clear"):
             self.save_to_settings_one_attribute("template_date_name", "%d.%m.%Y_%H.%M.%S")
-            self.restart_app()
+            self.message_restart()
         if entered_text.endswith("_save"):
             self.save_to_settings_one_attribute("package_name_var", self.package_name_var.get()[:-5])
+            self.save_to_settings_one_attribute("package_name_var_old", self.package_name_var.get()[:-5])
             self.save_to_settings_one_attribute("is_default", True)
             self.package_name_var.set(self.package_name_var.get()[:-5])
+            self.is_default = True
+        if entered_text.endswith("_return_name"):
+            self.set_attribute_from_settings_data("package_name_var_old", self.package_name_var)
             self.is_default = True
         if entered_text.endswith("_clear"):
             self.save_to_settings_one_attribute("package_name_var", "")
@@ -262,6 +267,15 @@ class App(ctk.CTk):
             self.package_name_var.set(f"{self.result_string}")
         else:
             pass
+
+    def message_restart(self):
+        confirmation = CTkMessagebox(title="Информация",
+                                     message=f"Для того, чтобы изменения вступили в силу необходима перезагрузка.\n\n",
+                                     option_1="Перезагрузить", option_2="Нет", button_width=85, button_height=30,
+                                     font=font)
+        response = confirmation.get()
+        if response == "Перезагрузить":
+            self.restart_app()
 
     def quit_program_key(self, event):
 
@@ -379,7 +393,8 @@ class App(ctk.CTk):
             "[_blue] - устанавливает цвета элементов в синий цвет\n\n"
             "[_green] - устанавливает цвета элементов в зелёный цвет\n\n"
             "[_date_template] - устанавливает шаблон даты для поля [Наименование пакета].\nПо умолчанию выбран шаблон [%d.%m.%Y_%H.%M.%S].\nДля установки другого шаблона, введите его в поле [Шаблон даты (%d.%m.%Y)], после введите _date_template. [%d.%m.%Y_date_template]\n\n"
-            "[_date_template_clear] - вернёт шаблон по умолчанию [%d.%m.%Y_%H.%M.%S].\n\n")
+            "[_date_template_clear] - вернёт шаблон по умолчанию [%d.%m.%Y_%H.%M.%S].\n\n"
+            "[_return_name] - вернёт последнее сохранённое с помощью команды [_save], наименование пакета.\n\n")
 
         self.create_window("Справка", help_text, show_save_button=False, width=900, height=415, editable=False)
 
@@ -683,3 +698,15 @@ class App(ctk.CTk):
         :return: None
         """
         self.check_for_updates()
+
+    @staticmethod
+    def set_attribute_from_settings_data(name_attribute, value):
+        with open("setting.json", "r") as file:
+            data = json.load(file)
+
+            if not isinstance(value, tk.StringVar):
+                value.delete(0, tk.END)
+                value.insert(0, (data[name_attribute]))
+            else:
+                value.set((data[name_attribute]))
+
