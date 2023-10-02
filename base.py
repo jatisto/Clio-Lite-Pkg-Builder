@@ -188,11 +188,11 @@ class App(ctk.CTk):
         self.path_to_pkg_combobox = ctk.CTkComboBox(master=self.frame_2, font=font, values=values, width=870, height=30,
                                                     border_width=1,
                                                     dropdown_font=font, corner_radius=5, button_hover_color="gray",
-                                                    dropdown_hover_color="#4b4b4b")
+                                                    dropdown_hover_color="#4b4b4b", command=self.on_path_selected)
 
         self.path_to_pkg_combobox.set(self.path_to_pkg_var.get())
         self.path_to_pkg_combobox.grid(row=2, column=0, padx=(15, 15), pady=(10, 10), sticky="nsew")
-        self.path_to_pkg_combobox.bind("<<ComboboxSelected>>", self.on_path_selected)
+        # self.path_to_pkg_combobox.bind("<<ComboboxSelected>>")
         # --------------------------------------------------------------------------------------------------------------
         self.create_check_buttons()
         # --------------------------------------------------------------------------------------------------------------
@@ -325,8 +325,8 @@ class App(ctk.CTk):
         else:
             print("Неизвестная операционная система, не удалось открыть папку.")
 
-    def on_path_selected(self, event):
-        self.path_to_pkg_var.set(self.path_to_pkg_combobox.get())
+    def on_path_selected(self, value):
+        self.path_to_pkg_var.set(value)
 
     def create_check_buttons(self):
         self.check_buttons_frame = ctk.CTkFrame(self.root_frame, border_width=0)
