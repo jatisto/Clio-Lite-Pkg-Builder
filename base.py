@@ -219,7 +219,7 @@ class App(ctk.CTk):
         self.progressbar = ttk.Progressbar(master=self.frame_4, mode='determinate', length=240)
         self.progressbar.grid(row=0, column=2, padx=(0, 15), pady=(5, 5), sticky="nsew")
         # --------------------------------------------------------------------------------------------------------------
-        button_generate_command = ctk.CTkButton(master=self.frame_4, text="Собрать строку",
+        button_generate_command = ctk.CTkButton(master=self.frame_4, text="Скопировать в буфер",
                                                 command=self.generate_command)
         button_generate_command.grid(row=0, column=3, padx=(0, 15), pady=(5, 5), sticky="nsew")
         # --------------------------------------------------------------------------------------------------------------
